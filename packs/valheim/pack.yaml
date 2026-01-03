@@ -1,0 +1,122 @@
+id: valheim
+name: Valheim Dedicated Server
+version: "1.0.0"
+description: Valheim dedicated server with crossplay support
+
+runtime:
+  image: lloesche/valheim-server:latest
+  workdir: /config
+
+storage:
+  mountPath: /config
+
+variables:
+  - name: serverName
+    label: Server Name
+    description: Name shown in server browser
+    type: string
+    default: "My Valheim Server"
+    required: true
+  - name: worldName
+    label: World Name
+    description: Name of the world (save file)
+    type: string
+    default: "Dedicated"
+    required: true
+  - name: password
+    label: Server Password
+    description: Password required to join (min 5 chars)
+    type: string
+    default: "secret"
+    required: true
+  - name: crossplay
+    label: Enable Crossplay
+    description: Allow Xbox/PC crossplay
+    type: boolean
+    default: false
+    required: false
+  - name: public
+    label: Public Server
+    description: List server in community browser
+    type: boolean
+    default: true
+    required: false
+  - name: backups
+    label: Enable Backups
+    description: Automatic world backups
+    type: boolean
+    default: true
+    required: false
+  - name: backupInterval
+    label: Backup Interval (seconds)
+    type: number
+    default: 3600
+    required: false
+    min: 600
+    max: 86400
+
+install:
+  method: none
+
+config:
+  envVars:
+    - name: SERVER_NAME
+      value: "{{.serverName}}"
+      template: true
+    - name: WORLD_NAME
+      value: "{{.worldName}}"
+      template: true
+    - name: SERVER_PASS
+      value: "{{.password}}"
+      template: true
+    - name: CROSSPLAY
+      value: "{{.crossplay}}"
+      template: true
+    - name: SERVER_PUBLIC
+      value: "{{.public}}"
+      template: true
+    - name: BACKUPS
+      value: "{{.backups}}"
+      template: true
+    - name: BACKUPS_INTERVAL
+      value: "{{.backupInterval}}"
+      template: true
+
+ports:
+  - name: game
+    containerPort: 2456
+    protocol: udp
+    hostPortMode: auto
+    description: Game port
+  - name: query
+    containerPort: 2457
+    protocol: udp
+    hostPortMode: auto
+    description: Query port
+  - name: http
+    containerPort: 80
+    protocol: tcp
+    hostPortMode: auto
+    description: Status HTTP port
+
+start:
+  command: []
+
+health:
+  type: process
+  gracePeriod: 300
+  interval: 60
+  timeout: 10
+  retries: 3
+
+shutdown:
+  signal: SIGINT
+  timeout: 120
+
+mods:
+  enabled: true
+  targets:
+    - name: bepinex
+      path: /config/bepinex
+      behavior: merge
+  applyWhileRunning: false

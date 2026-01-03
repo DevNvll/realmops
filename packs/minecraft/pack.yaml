@@ -1,0 +1,149 @@
+id: minecraft
+name: Minecraft Java Edition
+version: "1.0.0"
+description: Vanilla Minecraft Java Edition server
+
+runtime:
+  image: itzg/minecraft-server:latest
+  workdir: /data
+  env:
+    EULA: "TRUE"
+
+storage:
+  mountPath: /data
+
+variables:
+  - name: version
+    label: Minecraft Version
+    description: The Minecraft version to run
+    type: string
+    default: "LATEST"
+    required: false
+  - name: type
+    label: Server Type
+    description: The type of server to run
+    type: select
+    default: VANILLA
+    required: true
+    options:
+      - VANILLA
+      - PAPER
+      - SPIGOT
+      - FABRIC
+      - FORGE
+  - name: memory
+    label: Memory (GB)
+    description: Amount of RAM to allocate
+    type: number
+    default: 2
+    required: true
+    min: 1
+    max: 16
+  - name: maxPlayers
+    label: Max Players
+    description: Maximum number of concurrent players
+    type: number
+    default: 20
+    required: false
+    min: 1
+    max: 100
+  - name: motd
+    label: Server MOTD
+    description: Message of the day shown in server list
+    type: string
+    default: "A Minecraft Server"
+    required: false
+  - name: difficulty
+    label: Difficulty
+    type: select
+    default: normal
+    required: false
+    options:
+      - peaceful
+      - easy
+      - normal
+      - hard
+  - name: gamemode
+    label: Game Mode
+    type: select
+    default: survival
+    required: false
+    options:
+      - survival
+      - creative
+      - adventure
+      - spectator
+  - name: pvp
+    label: Enable PvP
+    description: Allow players to fight each other
+    type: boolean
+    default: true
+    required: false
+
+install:
+  method: none
+
+config:
+  envVars:
+    - name: VERSION
+      value: "{{.version}}"
+      template: true
+    - name: TYPE
+      value: "{{.type}}"
+      template: true
+    - name: MEMORY
+      value: "{{.memory}}G"
+      template: true
+    - name: MAX_PLAYERS
+      value: "{{.maxPlayers}}"
+      template: true
+    - name: MOTD
+      value: "{{.motd}}"
+      template: true
+    - name: DIFFICULTY
+      value: "{{.difficulty}}"
+      template: true
+    - name: MODE
+      value: "{{.gamemode}}"
+      template: true
+    - name: PVP
+      value: "{{.pvp}}"
+      template: true
+
+ports:
+  - name: game
+    containerPort: 25565
+    protocol: tcp
+    hostPortMode: auto
+    description: Minecraft game port
+  - name: rcon
+    containerPort: 25575
+    protocol: tcp
+    hostPortMode: auto
+    description: RCON admin port
+
+start:
+  command: []
+
+health:
+  type: tcp
+  port: 25565
+  gracePeriod: 120
+  interval: 30
+  timeout: 10
+  retries: 3
+
+shutdown:
+  signal: SIGTERM
+  timeout: 60
+
+mods:
+  enabled: true
+  targets:
+    - name: plugins
+      path: /data/plugins
+      behavior: merge
+    - name: mods
+      path: /data/mods
+      behavior: merge
+  applyWhileRunning: false

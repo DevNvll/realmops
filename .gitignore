@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+nul
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Data directories (runtime)
+data/
+
+# Go
+*.test
+coverage.out
+
+# Frontend
+frontend/dist/
+frontend/node_modules/
+
+# Backend
+backend/tmp/
+backend/gsm

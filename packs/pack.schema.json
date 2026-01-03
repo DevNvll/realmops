@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/pack.schema.json",
+  "title": "Game Server Manager Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "version", "runtime", "storage", "install", "config", "ports", "start", "health", "shutdown", "mods"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9\\-]{1,63}$"
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "description": { "type": "string", "maxLength": 2000 },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "workdir"],
+      "properties": {
+        "image": { "type": "string", "minLength": 1 },
+        "workdir": { "type": "string", "pattern": "^/.*" },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mountPath"],
+      "properties": {
+        "mountPath": {
+          "type": "string",
+          "pattern": "^/.*"
+        }
+      }
+    },
+    "variables": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/$defs/variable" }
+    },
+    "install": { "$ref": "#/$defs/install" },
+    "config": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "envVars": {
+          "type": "array",
+          "default": [],
+          "items": { "$ref": "#/$defs/envVar" }
+        }
+      }
+    },
+    "ports": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/$defs/port" }
+    },
+    "start": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "health": { "$ref": "#/$defs/health" },
+    "shutdown": { "$ref": "#/$defs/shutdown" },
+    "mods": { "$ref": "#/$defs/mods" }
+  },
+  "$defs": {
+    "variable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "label", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$"
+        },
+        "label": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "type": {
+          "type": "string",
+          "enum": ["string", "number", "boolean", "select"]
+        },
+        "required": { "type": "boolean", "default": false },
+        "default": {},
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "select" } } },
+          "then": { "required": ["options"] }
+        }
+      ]
+    },
+    "envVar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "value": { "type": "string" },
+        "template": { "type": "boolean", "default": false }
+      }
+    },
+    "install": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["none", "download", "steamcmd"]
+        },
+        "url": { "type": "string", "minLength": 1 },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "dest": { "type": "string", "pattern": "^/.*" },
+        "extract": { "type": "boolean", "default": false },
+        "destDir": { "type": "string", "pattern": "^/.*" },
+        "appId": { "type": "integer", "minimum": 1 },
+        "branch": { "type": "string", "default": "public" },
+        "validate": { "type": "boolean", "default": true },
+        "installDir": { "type": "string", "pattern": "^/.*" }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "containerPort", "protocol", "hostPortMode"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "containerPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "protocol": { "type": "string", "enum": ["tcp", "udp"] },
+        "hostPortMode": { "type": "string", "enum": ["auto", "fixed"] },
+        "hostPort": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "description": { "type": "string", "maxLength": 256 }
+      }
+    },
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["none", "tcp", "udp", "http", "process"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "path": { "type": "string" },
+        "gracePeriod": { "type": "integer", "minimum": 0, "default": 30 },
+        "interval": { "type": "integer", "minimum": 1, "default": 30 },
+        "timeout": { "type": "integer", "minimum": 1, "default": 10 },
+        "retries": { "type": "integer", "minimum": 1, "default": 3 }
+      }
+    },
+    "shutdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signal", "timeout"],
+      "properties": {
+        "signal": { "type": "string", "default": "SIGTERM" },
+        "timeout": { "type": "integer", "minimum": 1, "default": 30 }
+      }
+    },
+    "mods": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "targets", "applyWhileRunning"],
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "applyWhileRunning": { "type": "boolean", "default": false },
+        "targets": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "path", "behavior"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "path": { "type": "string", "pattern": "^/.*" },
+              "behavior": {
+                "type": "string",
+                "enum": ["merge", "clean-then-merge", "replace"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

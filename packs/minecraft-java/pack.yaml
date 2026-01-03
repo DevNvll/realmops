@@ -1,0 +1,148 @@
+id: minecraft-java
+name: Minecraft Java (Custom JAR)
+version: "1.0.0"
+description: Minecraft Java Edition server with custom JAR download
+
+runtime:
+  image: eclipse-temurin:21-jre
+  workdir: /data
+  env:
+    EULA: "TRUE"
+
+storage:
+  mountPath: /data
+
+variables:
+  - name: jarUrl
+    label: Server JAR URL
+    description: URL to download the server JAR from
+    type: string
+    required: true
+  - name: javaXms
+    label: Initial Memory (GB)
+    description: Initial heap size for Java
+    type: number
+    default: 1
+    required: true
+    min: 1
+    max: 16
+  - name: javaXmx
+    label: Max Memory (GB)
+    description: Maximum heap size for Java
+    type: number
+    default: 2
+    required: true
+    min: 1
+    max: 32
+  - name: maxPlayers
+    label: Max Players
+    description: Maximum number of concurrent players
+    type: number
+    default: 20
+    required: false
+    min: 1
+    max: 100
+  - name: motd
+    label: Server MOTD
+    description: Message of the day shown in server list
+    type: string
+    default: "A Minecraft Server"
+    required: false
+  - name: gamemode
+    label: Game Mode
+    type: select
+    default: survival
+    required: false
+    options:
+      - survival
+      - creative
+      - adventure
+      - spectator
+  - name: difficulty
+    label: Difficulty
+    type: select
+    default: normal
+    required: false
+    options:
+      - peaceful
+      - easy
+      - normal
+      - hard
+
+install:
+  method: download
+  url: "{{.jarUrl}}"
+  dest: /data/server.jar
+
+config:
+  templates:
+    - source: eula.txt
+      destination: eula.txt
+    - source: server.properties
+      destination: server.properties
+  envVars:
+    - name: JAR_URL
+      value: "{{.jarUrl}}"
+      template: true
+    - name: JAVA_XMS
+      value: "{{.javaXms}}G"
+      template: true
+    - name: JAVA_XMX
+      value: "{{.javaXmx}}G"
+      template: true
+    - name: MAX_PLAYERS
+      value: "{{.maxPlayers}}"
+      template: true
+    - name: MOTD
+      value: "{{.motd}}"
+      template: true
+    - name: GAMEMODE
+      value: "{{.gamemode}}"
+      template: true
+    - name: DIFFICULTY
+      value: "{{.difficulty}}"
+      template: true
+
+ports:
+  - name: game
+    containerPort: 25565
+    protocol: tcp
+    hostPortMode: auto
+    description: Minecraft game port
+  - name: rcon
+    containerPort: 25575
+    protocol: tcp
+    hostPortMode: auto
+    description: RCON admin port
+
+start:
+  command:
+    - java
+    - -Xms{{.javaXms}}G
+    - -Xmx{{.javaXmx}}G
+    - -jar
+    - /data/server.jar
+    - nogui
+
+health:
+  type: tcp
+  port: 25565
+  gracePeriod: 120
+  interval: 30
+  timeout: 10
+  retries: 3
+
+shutdown:
+  signal: SIGTERM
+  timeout: 60
+
+mods:
+  enabled: true
+  targets:
+    - name: mods
+      path: /data/mods
+      behavior: merge
+    - name: plugins
+      path: /data/plugins
+      behavior: merge
+  applyWhileRunning: false

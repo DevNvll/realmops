@@ -1,0 +1,12 @@
+{
+  "name": "soar",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n frontend,backend -c cyan,magenta \"npm run dev --prefix frontend\" \"cd backend && go run ./cmd/server\"",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "cd backend && go run ./cmd/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  controller:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gsm-controller
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/lib/gsm:/var/lib/gsm
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - GSM_LISTEN_ADDR=:8080
+      - GSM_DATA_DIR=/var/lib/gsm
+      - GSM_PACKS_DIR=/var/lib/gsm/packs
+      - GSM_PORT_RANGE_START=20000
+      - GSM_PORT_RANGE_END=40000
+      - GSM_SESSION_SECRET=${GSM_SESSION_SECRET:-change-me-in-production}
+    networks:
+      - gsm-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gsm-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://controller:8080/api
+    depends_on:
+      - controller
+    networks:
+      - gsm-network
+
+networks:
+  gsm-network:
+    driver: bridge
