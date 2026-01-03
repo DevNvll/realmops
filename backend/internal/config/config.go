@@ -20,11 +20,12 @@ type Config struct {
 
 func Load() (*Config, error) {
 	defaultDataDir, defaultDockerHost := getPlatformDefaults()
+	defaultPacksDir := getDefaultPacksDir(defaultDataDir)
 
 	cfg := &Config{
 		ListenAddr:     getEnv("GSM_LISTEN_ADDR", ":8080"),
 		DataDir:        getEnv("GSM_DATA_DIR", defaultDataDir),
-		PacksDir:       getEnv("GSM_PACKS_DIR", filepath.Join(defaultDataDir, "packs")),
+		PacksDir:       getEnv("GSM_PACKS_DIR", defaultPacksDir),
 		DockerHost:     getEnv("GSM_DOCKER_HOST", defaultDockerHost),
 		PortRangeStart: getEnvInt("GSM_PORT_RANGE_START", 20000),
 		PortRangeEnd:   getEnvInt("GSM_PORT_RANGE_END", 40000),
@@ -34,6 +35,16 @@ func Load() (*Config, error) {
 	cfg.DatabasePath = filepath.Join(cfg.DataDir, "db", "gsm.db")
 
 	return cfg, nil
+}
+
+func getDefaultPacksDir(defaultDataDir string) string {
+	// In development, prefer local ./packs directory if it exists
+	if info, err := os.Stat("./packs"); err == nil && info.IsDir() {
+		if abs, err := filepath.Abs("./packs"); err == nil {
+			return abs
+		}
+	}
+	return filepath.Join(defaultDataDir, "packs")
 }
 
 func getPlatformDefaults() (dataDir, dockerHost string) {

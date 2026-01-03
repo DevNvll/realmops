@@ -13,18 +13,20 @@ import (
 	"soar/internal/docker"
 	"soar/internal/jobs"
 	"soar/internal/packs"
+	"soar/internal/rcon"
 	"soar/internal/server"
 	"soar/internal/ws"
 )
 
 type Server struct {
-	cfg           *config.Config
-	db            *db.DB
-	serverManager *server.Manager
-	packLoader    *packs.Loader
-	jobRunner     *jobs.Runner
-	logStreamer   *ws.LogStreamer
-	httpServer    *http.Server
+	cfg            *config.Config
+	db             *db.DB
+	serverManager  *server.Manager
+	packLoader     *packs.Loader
+	jobRunner      *jobs.Runner
+	logStreamer    *ws.LogStreamer
+	consoleHandler *ws.ConsoleHandler
+	httpServer     *http.Server
 }
 
 func NewServer(
@@ -34,14 +36,16 @@ func NewServer(
 	packLoader *packs.Loader,
 	jobRunner *jobs.Runner,
 	dockerProvider *docker.Provider,
+	rconManager *rcon.Manager,
 ) *Server {
 	return &Server{
-		cfg:           cfg,
-		db:            database,
-		serverManager: serverManager,
-		packLoader:    packLoader,
-		jobRunner:     jobRunner,
-		logStreamer:   ws.NewLogStreamer(dockerProvider),
+		cfg:            cfg,
+		db:             database,
+		serverManager:  serverManager,
+		packLoader:     packLoader,
+		jobRunner:      jobRunner,
+		logStreamer:    ws.NewLogStreamer(dockerProvider),
+		consoleHandler: ws.NewConsoleHandler(packLoader, rconManager),
 	}
 }
 
@@ -76,6 +80,7 @@ func (s *Server) Start() error {
 			r.Post("/{id}/restart", s.handleRestartServer)
 			r.Get("/{id}/logs", s.handleGetServerLogs)
 			r.Get("/{id}/logs/stream", s.handleStreamServerLogs)
+			r.Get("/{id}/console", s.handleConsoleWebSocket)
 			r.Get("/{id}/jobs", s.handleGetServerJobs)
 			r.Get("/{id}/files", s.handleListFiles)
 			r.Get("/{id}/files/*", s.handleGetFile)

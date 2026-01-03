@@ -14,6 +14,7 @@ import (
 	"soar/internal/jobs"
 	"soar/internal/packs"
 	"soar/internal/ports"
+	"soar/internal/rcon"
 	"soar/internal/server"
 )
 
@@ -63,6 +64,8 @@ func main() {
 		cfg.DataDir,
 	)
 
+	rconManager := rcon.NewManager()
+
 	apiServer := api.NewServer(
 		cfg,
 		database,
@@ -70,6 +73,7 @@ func main() {
 		packLoader,
 		jobRunner,
 		dockerRuntime,
+		rconManager,
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())

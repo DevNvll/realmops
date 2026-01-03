@@ -50,6 +50,12 @@ export interface PortConfig {
   description: string;
 }
 
+export interface RCONConfig {
+  enabled: boolean;
+  portName: string;
+  passwordVariable: string;
+}
+
 export interface Manifest {
   id: string;
   name: string;
@@ -57,6 +63,7 @@ export interface Manifest {
   description: string;
   variables: VariableConfig[];
   ports: PortConfig[];
+  rcon?: RCONConfig;
 }
 
 export interface GamePack {
@@ -91,4 +98,15 @@ export interface CreateServerRequest {
   name: string;
   packId: string;
   variables: Record<string, unknown>;
+}
+
+export interface ConsoleMessage {
+  type: 'command';
+  payload: string;
+}
+
+export interface ConsoleResponse {
+  type: 'response' | 'error' | 'status';
+  payload: string;
+  time: string;
 }

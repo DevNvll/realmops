@@ -10,9 +10,10 @@ import { ScrollArea } from '../../components/ui/scroll-area'
 import { Textarea } from '../../components/ui/textarea'
 import {
   Play, Square, RotateCw, Trash2, ArrowLeft, Loader2,
-  Terminal, FolderOpen, FileText, Folder, Save, RefreshCw
+  Terminal, FolderOpen, FileText, Folder, Save, RefreshCw, TerminalSquare
 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import { ConsoleTab } from '../../components/server/ConsoleTab'
 
 export const Route = createFileRoute('/servers/$serverId')({
   component: ServerDetailPage,
@@ -37,26 +38,50 @@ function formatBytes(bytes: number): string {
 
 function LogsTab({ serverId, containerID }: { serverId: string; containerID?: string }) {
   const [logs, setLogs] = useState<string[]>([])
+  const [connectionError, setConnectionError] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const retryTimeoutRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!containerID) return
 
-    const wsUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api')
-      .replace('http', 'ws').replace('/api', '')
-    const ws = new WebSocket(`${wsUrl}/api/servers/${serverId}/logs/stream`)
-    wsRef.current = ws
+    const connect = () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) return
 
-    ws.onmessage = (event) => {
-      setLogs((prev) => [...prev.slice(-500), event.data])
+      const wsUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api')
+        .replace('http', 'ws').replace('/api', '')
+      const ws = new WebSocket(`${wsUrl}/api/servers/${serverId}/logs/stream`)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        setConnectionError(false)
+      }
+
+      ws.onmessage = (event) => {
+        setLogs((prev) => [...prev.slice(-500), event.data])
+      }
+
+      ws.onerror = () => {
+        setConnectionError(true)
+      }
+
+      ws.onclose = () => {
+        // Retry connection after 2 seconds if container exists
+        if (containerID) {
+          retryTimeoutRef.current = window.setTimeout(connect, 2000)
+        }
+      }
     }
 
-    ws.onerror = () => {
-      setLogs((prev) => [...prev, '[WebSocket error]'])
-    }
+    connect()
 
-    return () => ws.close()
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current)
+      }
+      wsRef.current?.close()
+    }
   }, [serverId, containerID])
 
   useEffect(() => {
@@ -69,9 +94,14 @@ function LogsTab({ serverId, containerID }: { serverId: string; containerID?: st
 
   return (
     <div className="space-y-2">
-      <Button size="sm" variant="outline" onClick={() => setLogs([])}>
-        <RefreshCw className="h-4 w-4 mr-2" />Clear
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="outline" onClick={() => setLogs([])}>
+          <RefreshCw className="h-4 w-4 mr-2" />Clear
+        </Button>
+        {connectionError && (
+          <span className="text-xs text-muted-foreground">Connecting...</span>
+        )}
+      </div>
       <ScrollArea ref={scrollRef} className="h-96 w-full rounded border bg-black p-4">
         <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
           {logs.length === 0 ? 'Waiting for logs...' : logs.join('')}
@@ -190,6 +220,12 @@ function ServerDetailPage() {
     queryKey: ['server', serverId],
     queryFn: () => api.servers.get(serverId),
     refetchInterval: 5000,
+  })
+
+  const { data: pack } = useQuery({
+    queryKey: ['pack', server?.packId],
+    queryFn: () => api.packs.get(server!.packId),
+    enabled: !!server?.packId,
   })
 
   const startMutation = useMutation({
@@ -312,12 +348,23 @@ function ServerDetailPage() {
           <TabsTrigger value="logs">
             <Terminal className="h-4 w-4 mr-2" />Logs
           </TabsTrigger>
+          <TabsTrigger value="console">
+            <TerminalSquare className="h-4 w-4 mr-2" />Console
+          </TabsTrigger>
           <TabsTrigger value="files">
             <FolderOpen className="h-4 w-4 mr-2" />Files
           </TabsTrigger>
         </TabsList>
         <TabsContent value="logs" className="mt-4">
           <LogsTab serverId={serverId} containerID={server.dockerContainerId} />
+        </TabsContent>
+        <TabsContent value="console" className="mt-4">
+          <ConsoleTab
+            serverId={serverId}
+            serverState={server.state}
+            rconEnabled={pack?.rcon?.enabled ?? false}
+            isInstalled={!!server.dockerContainerId}
+          />
         </TabsContent>
         <TabsContent value="files" className="mt-4">
           <FilesTab serverId={serverId} />

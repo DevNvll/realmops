@@ -91,3 +91,8 @@ export function createLogsWebSocket(serverId: string): WebSocket {
   const wsUrl = API_BASE.replace('http', 'ws').replace('/api', '');
   return new WebSocket(`${wsUrl}/api/servers/${serverId}/logs/stream`);
 }
+
+export function createConsoleWebSocket(serverId: string): WebSocket {
+  const wsUrl = API_BASE.replace('http', 'ws').replace('/api', '');
+  return new WebSocket(`${wsUrl}/api/servers/${serverId}/console`);
+}

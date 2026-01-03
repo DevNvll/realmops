@@ -15,6 +15,13 @@ type Manifest struct {
 	Health      HealthConfig     `yaml:"health" json:"health"`
 	Shutdown    ShutdownConfig   `yaml:"shutdown" json:"shutdown"`
 	Mods        ModsConfig       `yaml:"mods" json:"mods"`
+	RCON        RCONConfig       `yaml:"rcon" json:"rcon"`
+}
+
+type RCONConfig struct {
+	Enabled          bool   `yaml:"enabled" json:"enabled"`
+	PortName         string `yaml:"portName" json:"portName"`
+	PasswordVariable string `yaml:"passwordVariable" json:"passwordVariable"`
 }
 
 type RuntimeConfig struct {

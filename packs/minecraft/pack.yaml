@@ -79,6 +79,12 @@ variables:
     type: boolean
     default: true
     required: false
+  - name: rconPassword
+    label: RCON Password
+    description: Password for remote console access
+    type: string
+    default: "changeme"
+    required: true
 
 install:
   method: none
@@ -108,6 +114,12 @@ config:
       template: true
     - name: PVP
       value: "{{.pvp}}"
+      template: true
+    - name: ENABLE_RCON
+      value: "true"
+      template: false
+    - name: RCON_PASSWORD
+      value: "{{.rconPassword}}"
       template: true
 
 ports:
@@ -147,3 +159,8 @@ mods:
       path: /data/mods
       behavior: merge
   applyWhileRunning: false
+
+rcon:
+  enabled: true
+  portName: rcon
+  passwordVariable: rconPassword

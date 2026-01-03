@@ -125,6 +125,22 @@ func (s *Server) handleStreamServerLogs(w http.ResponseWriter, r *http.Request) 
 	s.logStreamer.HandleWebSocket(w, r, srv.DockerContainerID)
 }
 
+func (s *Server) handleConsoleWebSocket(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	srv, err := s.serverManager.GetServer(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "server not found")
+		return
+	}
+
+	if srv.State != "running" {
+		writeError(w, http.StatusBadRequest, "server must be running to use console")
+		return
+	}
+
+	s.consoleHandler.HandleWebSocket(w, r, srv)
+}
+
 func (s *Server) handleGetServerJobs(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	jobs, err := s.jobRunner.GetServerJobs(id, 20)

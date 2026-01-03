@@ -68,6 +68,12 @@ variables:
       - easy
       - normal
       - hard
+  - name: rconPassword
+    label: RCON Password
+    description: Password for remote console access
+    type: string
+    default: "changeme"
+    required: true
 
 install:
   method: download
@@ -146,3 +152,8 @@ mods:
       path: /data/plugins
       behavior: merge
   applyWhileRunning: false
+
+rcon:
+  enabled: true
+  portName: rcon
+  passwordVariable: rconPassword
