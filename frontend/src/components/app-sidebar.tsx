@@ -6,8 +6,8 @@ import {
   Gamepad2,
   Server,
   LogOut,
-  User,
   Settings,
+  ChevronDown,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSession, signOut } from "@/lib/auth-client"
@@ -32,6 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 const navMain = [
   {
@@ -61,19 +62,21 @@ function SidebarHeaderContent() {
   const isCollapsed = state === "collapsed"
 
   return (
-    <SidebarHeader className="!h-16 !flex-row !items-center border-b border-border/40 !p-0 !w-full">
+    <SidebarHeader className="h-16 flex-row items-center border-b border-border p-0 w-full">
       <Link
         to="/"
         className={cn(
-          "flex items-center gap-3 w-full",
+          "flex items-center gap-3 w-full h-full transition-all duration-200",
           isCollapsed ? "justify-center" : "px-4"
         )}
       >
-        <div className="size-8 bg-brand flex items-center justify-center shrink-0">
-          <Gamepad2 className="size-4 text-white" />
+        <div className="size-8 bg-foreground rounded-md flex items-center justify-center shrink-0">
+          <Gamepad2 className="size-4 text-background" />
         </div>
         {!isCollapsed && (
-          <span className="text-lg font-bold tracking-tight uppercase text-textMain">RealmOps</span>
+          <span className="text-base font-semibold tracking-tight">
+            RealmOps
+          </span>
         )}
       </Link>
     </SidebarHeader>
@@ -88,35 +91,66 @@ function SidebarUserFooter() {
 
   const handleSignOut = async () => {
     await signOut()
-    navigate({ to: '/login' })
+    navigate({ to: "/login" })
   }
 
   if (!session?.user) return null
 
+  const initials = session.user.name
+    ? session.user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : session.user.email?.charAt(0).toUpperCase() || "U"
+
   return (
-    <SidebarFooter className="border-t border-border/40">
+    <SidebarFooter className="border-t border-border p-2">
       <SidebarMenu>
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 className={cn(
-                  "text-[14px] font-medium transition-all bg-transparent",
-                  "text-textMuted hover:bg-surfaceHighlight/50 hover:text-textMain"
+                  "h-12 gap-3 transition-all duration-200",
+                  isCollapsed && "justify-center"
                 )}
               >
-                <User className="shrink-0 text-textMuted/60" />
+                <Avatar className="h-8 w-8 rounded-md">
+                  <AvatarFallback className="rounded-md bg-muted text-sm font-medium">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
                 {!isCollapsed && (
-                  <span className="truncate">{session.user.name || session.user.email}</span>
+                  <div className="flex flex-col items-start flex-1 min-w-0">
+                    <span className="text-sm font-medium truncate w-full">
+                      {session.user.name || "User"}
+                    </span>
+                    <span className="text-xs text-muted-foreground truncate w-full">
+                      {session.user.email}
+                    </span>
+                  </div>
+                )}
+                {!isCollapsed && (
+                  <ChevronDown className="size-4 text-muted-foreground" />
                 )}
               </SidebarMenuButton>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-48">
-              <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                {session.user.email}
+            <DropdownMenuContent align="start" side="top" className="w-56">
+              <div className="px-2 py-2">
+                <p className="text-sm font-medium">
+                  {session.user.name || "User"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {session.user.email}
+                </p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="text-red-500 focus:text-red-500">
+              <DropdownMenuItem
+                onClick={handleSignOut}
+                className="text-destructive focus:text-destructive"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
               </DropdownMenuItem>
@@ -135,13 +169,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeaderContent />
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] font-bold text-textMuted/60 uppercase tracking-widest">
+      <SidebarContent className="px-2">
+        <SidebarGroup className="py-4">
+          <SidebarGroupLabel className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
             Platform
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {navMain.map((item) => {
                 const isActive = currentPath === item.url
                 return (
@@ -151,17 +185,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       isActive={isActive}
                       tooltip={item.title}
                       className={cn(
-                        "text-[14px] font-medium transition-all bg-transparent",
+                        "h-10 gap-3 font-medium transition-all duration-200",
                         isActive
-                          ? "bg-surfaceHighlight text-textMain"
-                          : "text-textMuted hover:bg-surfaceHighlight/50 hover:text-textMain"
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       <Link to={item.url}>
                         <item.icon
                           className={cn(
-                            "shrink-0",
-                            isActive ? "text-brand" : "text-textMuted/60"
+                            "size-4 shrink-0 transition-colors duration-200",
+                            isActive
+                              ? "text-foreground"
+                              : "text-muted-foreground"
                           )}
                         />
                         <span>{item.title}</span>

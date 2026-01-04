@@ -72,25 +72,25 @@ export function ServerCard({ server }: ServerCardProps) {
   return (
     <div className="group relative overflow-hidden border bg-card">
       <div
-        className={`absolute top-0 left-0 w-1.5 h-full ${getStateColor(server.state)}`}
+        className={`absolute top-0 left-0 w-1 h-full ${getStateColor(server.state)}`}
       />
 
-      <div className="p-6 pb-3 pl-8">
+      <div className="p-6 pb-3 pl-7">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <h3 className="text-xl font-bold tracking-tight flex items-center gap-2 uppercase">
+            <h3 className="text-lg font-semibold tracking-tight flex items-center gap-2">
               <Link
                 to="/servers/$serverId"
                 params={{ serverId: server.id }}
-                className="hover:underline decoration-2 underline-offset-4"
+                className="hover:underline underline-offset-4"
               >
                 {server.name}
               </Link>
             </h3>
-            <div className="flex items-center gap-2 text-xs font-bold font-mono">
+            <div className="flex items-center gap-2 text-xs">
               <Badge
-                variant="outline"
-                className="text-xs py-0.5 h-6 font-bold bg-muted border-2 border-border rounded-none"
+                variant="secondary"
+                className="text-xs py-0.5 h-6 font-medium"
               >
                 {server.packId}
               </Badge>
@@ -115,20 +115,21 @@ export function ServerCard({ server }: ServerCardProps) {
           </div>
 
           <DropdownMenu>
-            <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-sm hover:bg-muted">
+            <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center hover:bg-muted">
               <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="rounded-none border-2 border-border shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
+              className="w-36"
             >
               {isStopped && (
                 <DropdownMenuItem
                   onClick={() => startMutation.mutate()}
                   disabled={isLoading}
-                  className="rounded-none focus:bg-muted cursor-pointer font-bold"
+                  className="cursor-pointer"
                 >
-                  <Play className="mr-2 h-4 w-4" /> START
+                  <Play className="mr-2 h-4 w-4" />
+                  Restart
                 </DropdownMenuItem>
               )}
               {isRunning && (
@@ -136,16 +137,18 @@ export function ServerCard({ server }: ServerCardProps) {
                   <DropdownMenuItem
                     onClick={() => restartMutation.mutate()}
                     disabled={isLoading}
-                    className="rounded-none focus:bg-muted cursor-pointer font-bold"
+                    className="cursor-pointer"
                   >
-                    <RotateCw className="mr-2 h-4 w-4" /> RESTART
+                    <RotateCw className="mr-2 h-4 w-4" />
+                    Restart
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => stopMutation.mutate()}
                     disabled={isLoading}
-                    className="text-orange-600 dark:text-orange-400 rounded-none focus:bg-orange-50 dark:focus:bg-orange-950/50 cursor-pointer font-bold"
+                    className="cursor-pointer"
                   >
-                    <Square className="mr-2 h-4 w-4" /> STOP
+                    <Square className="mr-2 h-4 w-4" />
+                    Stop
                   </DropdownMenuItem>
                 </>
               )}
@@ -153,35 +156,34 @@ export function ServerCard({ server }: ServerCardProps) {
                 onClick={() => {
                   if (confirm('Delete this server?')) deleteMutation.mutate()
                 }}
-                className="text-red-600 dark:text-red-400 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950/50 rounded-none cursor-pointer font-bold"
+                className="text-destructive focus:text-destructive cursor-pointer"
               >
-                <Trash2 className="mr-2 h-4 w-4" /> DELETE
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      <div className="p-6 pl-8 pt-2">
+      <div className="p-6 pl-7 pt-2">
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground font-mono">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Cpu className="h-3.5 w-3.5" />
               <span>CPU</span>
             </div>
-            <div className="flex items-end gap-2">
-              <span className="text-2xl font-bold tabular-nums">
+            <div className="flex items-end gap-1">
+              <span className="text-2xl font-semibold tabular-nums">
                 {server.stats && isRunning
                   ? server.stats.cpuPercent.toFixed(1)
                   : '0.0'}
               </span>
-              <span className="text-xs text-muted-foreground mb-1 font-bold">
-                %
-              </span>
+              <span className="text-sm text-muted-foreground mb-0.5">%</span>
             </div>
-            <div className="h-3 w-full border-2 border-border bg-muted relative">
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full bg-foreground transition-all duration-500 ease-out absolute top-0 left-0"
+                className="h-full bg-foreground/80 transition-all duration-500 ease-out rounded-full"
                 style={{
                   width: `${Math.min(server.stats?.cpuPercent || 0, 100)}%`
                 }}
@@ -190,20 +192,20 @@ export function ServerCard({ server }: ServerCardProps) {
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground font-mono">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <MemoryStick className="h-3.5 w-3.5" />
               <span>Memory</span>
             </div>
-            <div className="flex items-end gap-2">
-              <span className="text-2xl font-bold tabular-nums">
+            <div className="flex items-end gap-1">
+              <span className="text-2xl font-semibold tabular-nums">
                 {server.stats && isRunning
                   ? formatBytes(server.stats.memoryUsage)
                   : '0 B'}
               </span>
             </div>
-            <div className="h-3 w-full border-2 border-border bg-muted relative">
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full bg-foreground transition-all duration-500 ease-out absolute top-0 left-0"
+                className="h-full bg-foreground/80 transition-all duration-500 ease-out rounded-full"
                 style={{
                   width: `${Math.min(server.stats?.memoryPercent || 0, 100)}%`
                 }}
@@ -212,12 +214,12 @@ export function ServerCard({ server }: ServerCardProps) {
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-between border-t-2 border-border pt-4">
+        <div className="mt-6 flex items-center justify-between border-t pt-4">
           <div className="flex items-center gap-2">
             <div
-              className={`h-3 w-3 border border-black dark:border-white ${getStateColor(server.state).split(' ')[0]}`}
+              className={`h-2 w-2 rounded-full ${getStateColor(server.state).split(' ')[0]}`}
             />
-            <span className="text-xs font-bold uppercase text-muted-foreground">
+            <span className="text-xs text-muted-foreground capitalize">
               {server.state}
             </span>
           </div>

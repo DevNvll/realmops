@@ -23,7 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Package, Upload, Loader2, FolderOpen, Box, FileCode, Network, Plus, Pencil, Trash2 } from "lucide-react"
+import { Package, Upload, Loader2, FolderOpen, Plus, Pencil, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { useHeaderActions } from "@/components/header-actions"
 import { LoadingSpinner } from "@/components/loading-spinner"
@@ -124,9 +124,9 @@ function PacksPage() {
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Import Pack from Folder</DialogTitle>
+            <DialogTitle>Import from Folder</DialogTitle>
             <DialogDescription>
-              Enter the absolute path to a folder containing a pack.yaml file.
+              Enter the path to a folder containing a pack.yaml file.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -178,7 +178,7 @@ function PacksPage() {
     <div className="flex flex-1 flex-col gap-8 p-8 pt-6 max-w-7xl mx-auto w-full">
       <div>
         <p className="text-muted-foreground mt-1">
-          Manage installed game definitions and import new ones.
+          Server templates that define how game servers are deployed and configured.
         </p>
       </div>
 
@@ -189,8 +189,8 @@ function PacksPage() {
       {packs && packs.length === 0 && (
         <EmptyState
           icon={Package}
-          title="No game packs installed"
-          description="Import a pack.zip file or point to a folder to add support for a new game."
+          title="No packs yet"
+          description="Create a pack or import one to start deploying game servers."
           action={
             <div className="flex gap-3">
               <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="font-bold border-2">
@@ -209,81 +209,79 @@ function PacksPage() {
       )}
 
       {packs && packs.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {packs.map((pack) => (
-            <div key={pack.id} className="border bg-card group">
-              <div className="p-6 pb-3 border-b-2 border-border bg-muted/30">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-lg font-bold uppercase">{pack.name}</h3>
-                    <div className="font-mono text-xs mt-1 flex items-center gap-2">
-                      <span className="font-bold">{pack.id}</span>
-                      <span className="text-muted-foreground/60">•</span>
-                      <span>v{pack.version}</span>
+        <div className="border bg-card">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b text-left text-xs text-muted-foreground">
+                <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium hidden sm:table-cell">Description</th>
+                <th className="px-4 py-3 font-medium text-center w-20">Vars</th>
+                <th className="px-4 py-3 font-medium text-center w-20">Ports</th>
+                <th className="px-4 py-3 font-medium w-24"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {packs.map((pack) => (
+                <tr key={pack.id} className="border-b last:border-b-0 group hover:bg-muted/50">
+                  <td className="px-4 py-3">
+                    <div>
+                      <div className="font-medium">{pack.name}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {pack.id} • v{pack.version}
+                      </div>
                     </div>
-                  </div>
-                  <div className="h-8 w-8 bg-primary/10 text-primary flex items-center justify-center border-2 border-primary/20">
-                    <Box className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-              <div className="p-6">
-                <p className="text-sm text-muted-foreground mb-6 line-clamp-2 min-h-[2.5rem] font-mono">
-                  {pack.description}
-                </p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono uppercase font-bold">
-                    <div className="flex items-center gap-1.5 bg-muted px-2 py-1 border border-border">
-                      <FileCode className="h-3.5 w-3.5" />
-                      <span className="text-foreground">{pack.variables.length}</span> vars
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-muted px-2 py-1 border border-border">
-                      <Network className="h-3.5 w-3.5" />
-                      <span className="text-foreground">{pack.ports.length}</span> ports
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Link to="/packs/$packId/edit" params={{ packId: pack.id }}>
-                      <Button variant="ghost" size="icon-xs">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    </Link>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon-xs" className="text-destructive hover:text-destructive">
-                          <Trash2 className="h-3.5 w-3.5" />
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted-foreground hidden sm:table-cell">
+                    <span className="line-clamp-1">{pack.description}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center text-sm tabular-nums">
+                    {pack.variables.length}
+                  </td>
+                  <td className="px-4 py-3 text-center text-sm tabular-nums">
+                    {pack.ports.length}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <Link to="/packs/$packId/edit" params={{ packId: pack.id }}>
+                        <Button variant="ghost" size="icon-xs">
+                          <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Game Pack</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete <span className="font-bold">{pack.name}</span>? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteMutation.mutate(pack.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            {deleteMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 mr-2" />
-                            )}
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+                      </Link>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon-xs" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Pack</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete <span className="font-medium">{pack.name}</span>? This cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(pack.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {deleteMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4 mr-2" />
+                              )}
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
