@@ -1,10 +1,14 @@
 import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { auth, hasUsers } from "./auth";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 
 const app = new Hono();
+const isProduction = process.env.NODE_ENV === "production";
 
 // Middleware
 app.use("*", logger());
@@ -35,11 +39,48 @@ app.get("/health", (c) => {
   return c.json({ status: "ok" });
 });
 
-const port = parseInt(process.env.AUTH_PORT || "3001", 10);
+// In production, serve static files from the dist directory
+if (isProduction) {
+  // Serve static assets (JS, CSS, images, etc.)
+  app.use(
+    "/assets/*",
+    serveStatic({
+      root: "./dist",
+      rewriteRequestPath: (path) => path,
+    })
+  );
 
-console.log(`Auth server starting on http://localhost:${port}`);
+  // Serve other static files
+  app.use(
+    "/*",
+    serveStatic({
+      root: "./dist",
+      rewriteRequestPath: (path) => path,
+    })
+  );
+
+  // SPA fallback - serve index.html for all unmatched routes
+  app.get("*", (c) => {
+    const indexPath = join(process.cwd(), "dist", "index.html");
+    if (existsSync(indexPath)) {
+      const html = readFileSync(indexPath, "utf-8");
+      return c.html(html);
+    }
+    return c.notFound();
+  });
+}
+
+const port = parseInt(process.env.AUTH_PORT || "3001", 10);
+// In production, serve on port 3000 (main app port)
+const serverPort = isProduction ? parseInt(process.env.PORT || "3000", 10) : port;
+
+console.log(
+  isProduction
+    ? `RealmOps server starting on http://localhost:${serverPort}`
+    : `Auth server starting on http://localhost:${port}`
+);
 
 serve({
   fetch: app.fetch,
-  port,
+  port: serverPort,
 });
