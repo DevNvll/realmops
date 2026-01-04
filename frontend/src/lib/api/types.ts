@@ -56,13 +56,107 @@ export interface RCONConfig {
   passwordVariable: string;
 }
 
+export interface RuntimeConfig {
+  image: string;
+  workdir?: string;
+  user?: string;
+  env?: Record<string, string>;
+  entrypoint?: string[];
+}
+
+export interface StorageConfig {
+  mountPath: string;
+}
+
+export interface InstallConfig {
+  method: 'none' | 'download' | 'steamcmd';
+  url?: string;
+  dest?: string;
+  checksum?: string;
+  appId?: number;
+  branch?: string;
+}
+
+export interface TemplateConfig {
+  source: string;
+  destination: string;
+}
+
+export interface EnvVarConfig {
+  name: string;
+  value: string;
+  template?: boolean;
+}
+
+export interface ConfigRendering {
+  templates?: TemplateConfig[];
+  envVars?: EnvVarConfig[];
+}
+
+export interface StartConfig {
+  command: string[];
+}
+
+export interface HealthConfig {
+  type?: 'tcp' | 'udp' | 'process' | 'http';
+  port?: number;
+  path?: string;
+  gracePeriod?: number;
+  interval?: number;
+  timeout?: number;
+  retries?: number;
+}
+
+export interface ShutdownConfig {
+  signal?: string;
+  timeout?: number;
+}
+
+export interface ModTarget {
+  name: string;
+  path: string;
+  behavior?: 'merge' | 'clean-then-merge' | 'replace';
+}
+
+export interface ModsConfig {
+  enabled?: boolean;
+  targets?: ModTarget[];
+  applyWhileRunning?: boolean;
+}
+
 export interface Manifest {
   id: string;
   name: string;
   version: string;
   description: string;
+  runtime: RuntimeConfig;
+  storage: StorageConfig;
   variables: VariableConfig[];
+  install?: InstallConfig;
+  config?: ConfigRendering;
   ports: PortConfig[];
+  start: StartConfig;
+  health?: HealthConfig;
+  shutdown?: ShutdownConfig;
+  mods?: ModsConfig;
+  rcon?: RCONConfig;
+}
+
+export interface CreatePackRequest {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  runtime: RuntimeConfig;
+  storage: StorageConfig;
+  variables?: VariableConfig[];
+  install?: InstallConfig;
+  config?: ConfigRendering;
+  ports: PortConfig[];
+  start: StartConfig;
+  health?: HealthConfig;
+  shutdown?: ShutdownConfig;
+  mods?: ModsConfig;
   rcon?: RCONConfig;
 }
 

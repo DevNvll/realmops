@@ -16,6 +16,7 @@ type Config struct {
 	PortRangeStart int
 	PortRangeEnd   int
 	SessionSecret  string
+	AuthServiceURL string
 }
 
 func Load() (*Config, error) {
@@ -30,6 +31,7 @@ func Load() (*Config, error) {
 		PortRangeStart: getEnvInt("GSM_PORT_RANGE_START", 20000),
 		PortRangeEnd:   getEnvInt("GSM_PORT_RANGE_END", 40000),
 		SessionSecret:  getEnv("GSM_SESSION_SECRET", "change-me-in-production"),
+		AuthServiceURL: getEnv("GSM_AUTH_SERVICE_URL", "http://localhost:3001"),
 	}
 
 	cfg.DatabasePath = filepath.Join(cfg.DataDir, "db", "gsm.db")

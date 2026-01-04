@@ -11,7 +11,7 @@ import {
   TabsTrigger
 } from '../../components/ui/tabs'
 import { ScrollArea } from '../../components/ui/scroll-area'
-import { Textarea } from '../../components/ui/textarea'
+import Editor from '@monaco-editor/react'
 import {
   Play,
   Square,
@@ -180,25 +180,71 @@ function LogsTab({
   )
 }
 
+function getLanguageFromFilename(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase() || ''
+  const languageMap: Record<string, string> = {
+    // Config files
+    json: 'json',
+    yaml: 'yaml',
+    yml: 'yaml',
+    toml: 'ini',
+    ini: 'ini',
+    cfg: 'ini',
+    conf: 'ini',
+    properties: 'ini',
+    // Programming
+    js: 'javascript',
+    ts: 'typescript',
+    jsx: 'javascript',
+    tsx: 'typescript',
+    py: 'python',
+    java: 'java',
+    lua: 'lua',
+    sh: 'shell',
+    bash: 'shell',
+    bat: 'bat',
+    ps1: 'powershell',
+    // Web
+    html: 'html',
+    htm: 'html',
+    css: 'css',
+    scss: 'scss',
+    xml: 'xml',
+    // Data
+    sql: 'sql',
+    md: 'markdown',
+    txt: 'plaintext',
+    log: 'plaintext'
+  }
+  return languageMap[ext] || 'plaintext'
+}
+
 function FilesTab({ serverId }: { serverId: string }) {
   const [currentPath, setCurrentPath] = useState('')
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [fileContent, setFileContent] = useState('')
   const [saving, setSaving] = useState(false)
+  const [loadingFile, setLoadingFile] = useState(false)
 
   const { data: files, isLoading } = useQuery({
     queryKey: ['server-files', serverId, currentPath],
     queryFn: () => api.servers.files.list(serverId, currentPath)
   })
 
-  const handleNavigate = (entry: FileEntry) => {
+  const handleNavigate = async (entry: FileEntry) => {
     if (entry.isDir) {
       setCurrentPath(currentPath ? `${currentPath}/${entry.name}` : entry.name)
       setSelectedFile(null)
     } else {
       const filePath = currentPath ? `${currentPath}/${entry.name}` : entry.name
+      setLoadingFile(true)
       setSelectedFile(filePath)
-      api.servers.files.get(serverId, filePath).then(setFileContent)
+      try {
+        const content = await api.servers.files.get(serverId, filePath)
+        setFileContent(content)
+      } finally {
+        setLoadingFile(false)
+      }
     }
   }
 
@@ -220,7 +266,7 @@ function FilesTab({ serverId }: { serverId: string }) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
       <div className="lg:col-span-1 flex flex-col h-full border-2 border-border bg-card">
         <div className="py-3 px-4 border-b-2 border-border bg-muted/30">
           <div className="flex items-center gap-2 text-sm font-bold overflow-hidden font-mono">
@@ -300,13 +346,36 @@ function FilesTab({ serverId }: { serverId: string }) {
                 SAVE
               </Button>
             </div>
-            <div className="p-0 flex-1 relative">
-              <Textarea
-                className="font-mono text-sm h-full w-full resize-none border-0 rounded-none focus-visible:ring-0 p-4 leading-relaxed bg-background text-foreground"
-                value={fileContent}
-                onChange={(e) => setFileContent(e.target.value)}
-                spellCheck={false}
-              />
+            <div className="flex-1 min-h-0">
+              {loadingFile ? (
+                <div className="flex items-center justify-center h-full bg-[#1e1e1e]">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Editor
+                  key={selectedFile}
+                  height="100%"
+                  language={getLanguageFromFilename(selectedFile)}
+                  value={fileContent}
+                  onChange={(value) => setFileContent(value || '')}
+                  theme="vs-dark"
+                  loading={
+                    <div className="flex items-center justify-center h-full bg-[#1e1e1e]">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 13,
+                    lineNumbers: 'on',
+                    scrollBeyondLastLine: false,
+                    wordWrap: 'on',
+                    automaticLayout: true,
+                    tabSize: 2,
+                    padding: { top: 12, bottom: 12 }
+                  }}
+                />
+              )}
             </div>
           </>
         ) : (

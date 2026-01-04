@@ -1,0 +1,175 @@
+id: rust
+name: Rust Dedicated Server
+version: "1.0.0"
+description: Rust survival game dedicated server with RCON and Oxide mod support
+
+runtime:
+  image: didstopia/rust-server:latest
+  workdir: /steamcmd/rust
+
+storage:
+  mountPath: /steamcmd/rust
+
+variables:
+  - name: serverName
+    label: Server Name
+    description: The name displayed in the server browser
+    type: string
+    default: "My Rust Server"
+    required: true
+
+  - name: maxPlayers
+    label: Max Players
+    description: Maximum number of players allowed on the server
+    type: number
+    default: 50
+    required: true
+    min: 1
+    max: 500
+
+  - name: worldSize
+    label: World Size
+    description: Size of the procedurally generated map (in meters)
+    type: number
+    default: 3000
+    required: true
+    min: 1000
+    max: 6000
+
+  - name: seed
+    label: World Seed
+    description: Seed for procedural map generation
+    type: number
+    default: 12345
+    required: false
+
+  - name: rconPassword
+    label: RCON Password
+    description: Password for remote console access
+    type: string
+    default: "changeme"
+    required: true
+
+  - name: saveInterval
+    label: Save Interval
+    description: How often to save the world (in seconds)
+    type: number
+    default: 600
+    required: false
+    min: 60
+    max: 3600
+
+  - name: serverDescription
+    label: Server Description
+    description: Description shown in the server browser
+    type: string
+    default: "A Rust Server"
+    required: false
+
+  - name: serverUrl
+    label: Server URL
+    description: Website URL for your server (optional)
+    type: string
+    default: ""
+    required: false
+
+  - name: serverBannerUrl
+    label: Banner Image URL
+    description: URL to a banner image for your server (optional)
+    type: string
+    default: ""
+    required: false
+
+  - name: oxideEnabled
+    label: Enable Oxide Mods
+    description: Enable Oxide modding framework
+    type: boolean
+    default: false
+    required: false
+
+install:
+  method: none
+
+config:
+  templates: []
+  envVars:
+    - name: RUST_SERVER_NAME
+      value: "{{.serverName}}"
+      template: true
+    - name: RUST_SERVER_MAXPLAYERS
+      value: "{{.maxPlayers}}"
+      template: true
+    - name: RUST_SERVER_WORLDSIZE
+      value: "{{.worldSize}}"
+      template: true
+    - name: RUST_SERVER_SEED
+      value: "{{.seed}}"
+      template: true
+    - name: RUST_SERVER_DESCRIPTION
+      value: "{{.serverDescription}}"
+      template: true
+    - name: RUST_SERVER_URL
+      value: "{{.serverUrl}}"
+      template: true
+    - name: RUST_SERVER_BANNER_URL
+      value: "{{.serverBannerUrl}}"
+      template: true
+    - name: RUST_SERVER_SAVE_INTERVAL
+      value: "{{.saveInterval}}"
+      template: true
+    - name: RUST_RCON_PASSWORD
+      value: "{{.rconPassword}}"
+      template: true
+    - name: RUST_RCON_WEB
+      value: "1"
+      template: false
+    - name: RUST_OXIDE_ENABLED
+      value: "{{if .oxideEnabled}}1{{else}}0{{end}}"
+      template: true
+
+ports:
+  - name: game
+    containerPort: 28015
+    protocol: udp
+    hostPortMode: auto
+    description: Main game port
+
+  - name: rcon
+    containerPort: 28016
+    protocol: tcp
+    hostPortMode: auto
+    description: RCON remote console port
+
+  - name: rustplus
+    containerPort: 28082
+    protocol: tcp
+    hostPortMode: auto
+    description: Rust+ companion app port
+
+start:
+  command: []
+
+health:
+  type: tcp
+  port: 28016
+  gracePeriod: 300
+  interval: 30
+  timeout: 10
+  retries: 3
+
+shutdown:
+  signal: SIGTERM
+  timeout: 120
+
+mods:
+  enabled: true
+  targets:
+    - name: oxide
+      path: /steamcmd/rust/oxide/plugins
+      behavior: merge
+  applyWhileRunning: false
+
+rcon:
+  enabled: true
+  portName: rcon
+  passwordVariable: rconPassword

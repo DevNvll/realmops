@@ -1,15 +1,20 @@
 import * as React from "react"
-import { Link, useRouterState } from "@tanstack/react-router"
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router"
 import {
   Package,
   LayoutDashboard,
   Gamepad2,
+  Server,
+  LogOut,
+  User,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSession, signOut } from "@/lib/auth-client"
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -19,12 +24,24 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const navMain = [
   {
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Servers",
+    url: "/servers",
+    icon: Server,
   },
   {
     title: "Game Packs",
@@ -38,15 +55,70 @@ function SidebarHeaderContent() {
   const isCollapsed = state === "collapsed"
 
   return (
-    <SidebarHeader className="!h-16 !flex-row !items-center border-b border-border/40 !p-0 justify-center group-data-[state=expanded]:justify-start group-data-[state=expanded]:px-4">
-      <Link to="/" className="flex items-center gap-2">
-        {isCollapsed ? (
-          <Gamepad2 className="size-5 text-textMain" />
-        ) : (
-          <span className="text-xl font-bold tracking-tight uppercase text-textMain">Soar</span>
+    <SidebarHeader className="!h-16 !flex-row !items-center border-b border-border/40 !p-0 !w-full">
+      <Link
+        to="/"
+        className={cn(
+          "flex items-center gap-3 w-full",
+          isCollapsed ? "justify-center" : "px-4"
+        )}
+      >
+        <div className="size-8 bg-brand flex items-center justify-center shrink-0">
+          <Gamepad2 className="size-4 text-white" />
+        </div>
+        {!isCollapsed && (
+          <span className="text-lg font-bold tracking-tight uppercase text-textMain">Soar</span>
         )}
       </Link>
     </SidebarHeader>
+  )
+}
+
+function SidebarUserFooter() {
+  const { state } = useSidebar()
+  const isCollapsed = state === "collapsed"
+  const { data: session } = useSession()
+  const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await signOut()
+    navigate({ to: '/login' })
+  }
+
+  if (!session?.user) return null
+
+  return (
+    <SidebarFooter className="border-t border-border/40">
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarMenuButton
+                className={cn(
+                  "text-[14px] font-medium transition-all bg-transparent",
+                  "text-textMuted hover:bg-surfaceHighlight/50 hover:text-textMain"
+                )}
+              >
+                <User className="shrink-0 text-textMuted/60" />
+                {!isCollapsed && (
+                  <span className="truncate">{session.user.name || session.user.email}</span>
+                )}
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                {session.user.email}
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="text-red-500 focus:text-red-500">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarFooter>
   )
 }
 
@@ -95,8 +167,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
       </SidebarContent>
+      <SidebarUserFooter />
     </Sidebar>
   )
 }

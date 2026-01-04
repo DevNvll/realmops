@@ -7,11 +7,12 @@ import (
 type ServerState string
 
 const (
-	ServerStateStopped  ServerState = "stopped"
-	ServerStateStarting ServerState = "starting"
-	ServerStateRunning  ServerState = "running"
-	ServerStateStopping ServerState = "stopping"
-	ServerStateError    ServerState = "error"
+	ServerStateStopped    ServerState = "stopped"
+	ServerStateInstalling ServerState = "installing"
+	ServerStateStarting   ServerState = "starting"
+	ServerStateRunning    ServerState = "running"
+	ServerStateStopping   ServerState = "stopping"
+	ServerStateError      ServerState = "error"
 )
 
 type JobStatus string

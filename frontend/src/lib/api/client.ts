@@ -1,9 +1,10 @@
-import type { Server, Job, FileEntry, CreateServerRequest, Manifest } from './types';
+import type { Server, Job, FileEntry, CreateServerRequest, Manifest, CreatePackRequest } from './types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_BASE = '/api';
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${endpoint}`, {
+    credentials: 'include',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -45,7 +46,9 @@ export const api = {
       list: (serverId: string, path = '') =>
         request<FileEntry[]>(`/servers/${serverId}/files${path ? `/${path}` : ''}`),
       get: async (serverId: string, path: string) => {
-        const res = await fetch(`${API_BASE}/servers/${serverId}/files/${path}`);
+        const res = await fetch(`${API_BASE}/servers/${serverId}/files/${path}`, {
+          credentials: 'include',
+        });
         if (!res.ok) throw new Error('Failed to get file');
         return res.text();
       },
@@ -53,6 +56,7 @@ export const api = {
         const res = await fetch(`${API_BASE}/servers/${serverId}/files/${path}`, {
           method: 'PUT',
           body: content,
+          credentials: 'include',
         });
         if (!res.ok) throw new Error('Failed to save file');
       },
@@ -63,12 +67,25 @@ export const api = {
   packs: {
     list: () => request<Manifest[]>('/packs'),
     get: (id: string) => request<Manifest>(`/packs/${id}`),
+    create: (data: CreatePackRequest) =>
+      request<Manifest>('/packs', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: CreatePackRequest) =>
+      request<Manifest>(`/packs/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<void>(`/packs/${id}`, { method: 'DELETE' }),
     import: async (file: File) => {
       const formData = new FormData();
       formData.append('pack', file);
       const res = await fetch(`${API_BASE}/packs/import`, {
         method: 'POST',
         body: formData,
+        credentials: 'include',
       });
       if (!res.ok) {
         const error = await res.json().catch(() => ({ error: 'Import failed' }));
@@ -81,6 +98,27 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ path }),
       }),
+    files: {
+      list: (packId: string, path = '') =>
+        request<FileEntry[]>(`/packs/${packId}/files${path ? `/${path}` : ''}`),
+      get: async (packId: string, path: string) => {
+        const res = await fetch(`${API_BASE}/packs/${packId}/files/${path}`, {
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error('Failed to get file');
+        return res.text();
+      },
+      put: async (packId: string, path: string, content: string) => {
+        const res = await fetch(`${API_BASE}/packs/${packId}/files/${path}`, {
+          method: 'PUT',
+          body: content,
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error('Failed to save file');
+      },
+      delete: (packId: string, path: string) =>
+        request<void>(`/packs/${packId}/files/${path}`, { method: 'DELETE' }),
+    },
   },
   jobs: {
     get: (id: string) => request<Job>(`/jobs/${id}`),
@@ -88,11 +126,11 @@ export const api = {
 };
 
 export function createLogsWebSocket(serverId: string): WebSocket {
-  const wsUrl = API_BASE.replace('http', 'ws').replace('/api', '');
-  return new WebSocket(`${wsUrl}/api/servers/${serverId}/logs/stream`);
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return new WebSocket(`${protocol}//${window.location.host}/api/servers/${serverId}/logs/stream`);
 }
 
 export function createConsoleWebSocket(serverId: string): WebSocket {
-  const wsUrl = API_BASE.replace('http', 'ws').replace('/api', '');
-  return new WebSocket(`${wsUrl}/api/servers/${serverId}/console`);
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return new WebSocket(`${protocol}//${window.location.host}/api/servers/${serverId}/console`);
 }

@@ -187,6 +187,11 @@ func (m *Manager) ListServers(ctx context.Context) ([]*models.Server, error) {
 		ports, _ := m.getServerPorts(server.ID)
 		server.Ports = ports
 
+		if server.DockerContainerID != "" && server.State == models.ServerStateRunning {
+			stats, _ := m.docker.GetContainerStats(ctx, server.DockerContainerID)
+			server.Stats = stats
+		}
+
 		servers = append(servers, &server)
 	}
 	return servers, rows.Err()
@@ -196,6 +201,10 @@ func (m *Manager) StartServer(ctx context.Context, id string) error {
 	server, err := m.GetServer(ctx, id)
 	if err != nil {
 		return err
+	}
+
+	if server.State == models.ServerStateInstalling {
+		return fmt.Errorf("server is currently installing")
 	}
 
 	if server.DockerContainerID == "" {
@@ -275,13 +284,18 @@ func (m *Manager) handleInstallJob(ctx context.Context, job *models.Job) error {
 		return err
 	}
 
+	// Set state to installing
+	m.updateServerState(server.ID, models.ServerStateInstalling, models.ServerStateStopped)
+
 	manifest, err := m.packs.LoadFromDir(m.packs.GetPackPath(server.PackID))
 	if err != nil {
+		m.updateServerState(server.ID, models.ServerStateError, models.ServerStateStopped)
 		return err
 	}
 
 	serverDataDir := filepath.Join(m.dataDir, "servers", server.ID, "data")
 	if err := os.MkdirAll(serverDataDir, 0755); err != nil {
+		m.updateServerState(server.ID, models.ServerStateError, models.ServerStateStopped)
 		return err
 	}
 
@@ -289,6 +303,7 @@ func (m *Manager) handleInstallJob(ctx context.Context, job *models.Job) error {
 	if manifest.Install.Method == "download" {
 		m.jobs.UpdateProgress(job.ID, 10, "Downloading server files...\n")
 		if err := m.handleDownloadInstall(manifest, server, serverDataDir); err != nil {
+			m.updateServerState(server.ID, models.ServerStateError, models.ServerStateStopped)
 			return fmt.Errorf("failed to download server files: %w", err)
 		}
 	}
@@ -296,12 +311,14 @@ func (m *Manager) handleInstallJob(ctx context.Context, job *models.Job) error {
 	m.jobs.UpdateProgress(job.ID, 30, "Rendering configuration...\n")
 
 	if err := m.renderConfigs(manifest, server, serverDataDir); err != nil {
+		m.updateServerState(server.ID, models.ServerStateError, models.ServerStateStopped)
 		return fmt.Errorf("failed to render configs: %w", err)
 	}
 
 	m.jobs.UpdateProgress(job.ID, 40, "Pulling image...\n")
 
 	if err := m.docker.PullImage(ctx, manifest.Runtime.Image); err != nil {
+		m.updateServerState(server.ID, models.ServerStateError, models.ServerStateStopped)
 		return fmt.Errorf("failed to pull image: %w", err)
 	}
 
@@ -356,6 +373,7 @@ func (m *Manager) handleInstallJob(ctx context.Context, job *models.Job) error {
 		},
 	})
 	if err != nil {
+		m.updateServerState(server.ID, models.ServerStateError, models.ServerStateStopped)
 		return fmt.Errorf("failed to create container: %w", err)
 	}
 
@@ -364,10 +382,20 @@ func (m *Manager) handleInstallJob(ctx context.Context, job *models.Job) error {
 	_, err = m.db.Exec("UPDATE servers SET docker_container_id = ?, updated_at = ? WHERE id = ?",
 		containerID, time.Now(), server.ID)
 	if err != nil {
+		m.updateServerState(server.ID, models.ServerStateError, models.ServerStateStopped)
 		return err
 	}
 
-	m.jobs.UpdateProgress(job.ID, 100, "Installation complete\n")
+	m.jobs.UpdateProgress(job.ID, 90, "Starting server...\n")
+
+	// Auto-start server after installation
+	if err := m.docker.StartContainer(ctx, containerID); err != nil {
+		m.updateServerState(server.ID, models.ServerStateError, models.ServerStateStopped)
+		return fmt.Errorf("failed to start server after installation: %w", err)
+	}
+
+	m.updateServerState(server.ID, models.ServerStateRunning, models.ServerStateRunning)
+	m.jobs.UpdateProgress(job.ID, 100, "Installation complete, server started\n")
 	return nil
 }
 

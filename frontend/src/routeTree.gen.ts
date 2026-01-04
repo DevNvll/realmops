@@ -9,14 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as ServersRouteImport } from './routes/servers'
 import { Route as PacksRouteImport } from './routes/packs'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ServersIndexRouteImport } from './routes/servers/index'
+import { Route as PacksIndexRouteImport } from './routes/packs/index'
 import { Route as ServersNewRouteImport } from './routes/servers/new'
 import { Route as ServersServerIdRouteImport } from './routes/servers/$serverId'
+import { Route as PacksNewRouteImport } from './routes/packs/new'
+import { Route as PacksPackIdEditRouteImport } from './routes/packs/$packId.edit'
 
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ServersRoute = ServersRouteImport.update({
+  id: '/servers',
+  path: '/servers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PacksRoute = PacksRouteImport.update({
   id: '/packs',
   path: '/packs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -24,58 +46,151 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ServersIndexRoute = ServersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ServersRoute,
+} as any)
+const PacksIndexRoute = PacksIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PacksRoute,
+} as any)
 const ServersNewRoute = ServersNewRouteImport.update({
-  id: '/servers/new',
-  path: '/servers/new',
-  getParentRoute: () => rootRouteImport,
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => ServersRoute,
 } as any)
 const ServersServerIdRoute = ServersServerIdRouteImport.update({
-  id: '/servers/$serverId',
-  path: '/servers/$serverId',
-  getParentRoute: () => rootRouteImport,
+  id: '/$serverId',
+  path: '/$serverId',
+  getParentRoute: () => ServersRoute,
+} as any)
+const PacksNewRoute = PacksNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => PacksRoute,
+} as any)
+const PacksPackIdEditRoute = PacksPackIdEditRouteImport.update({
+  id: '/$packId/edit',
+  path: '/$packId/edit',
+  getParentRoute: () => PacksRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/packs': typeof PacksRoute
+  '/login': typeof LoginRoute
+  '/packs': typeof PacksRouteWithChildren
+  '/servers': typeof ServersRouteWithChildren
+  '/setup': typeof SetupRoute
+  '/packs/new': typeof PacksNewRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/servers/new': typeof ServersNewRoute
+  '/packs/': typeof PacksIndexRoute
+  '/servers/': typeof ServersIndexRoute
+  '/packs/$packId/edit': typeof PacksPackIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/packs': typeof PacksRoute
+  '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
+  '/packs/new': typeof PacksNewRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/servers/new': typeof ServersNewRoute
+  '/packs': typeof PacksIndexRoute
+  '/servers': typeof ServersIndexRoute
+  '/packs/$packId/edit': typeof PacksPackIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/packs': typeof PacksRoute
+  '/login': typeof LoginRoute
+  '/packs': typeof PacksRouteWithChildren
+  '/servers': typeof ServersRouteWithChildren
+  '/setup': typeof SetupRoute
+  '/packs/new': typeof PacksNewRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/servers/new': typeof ServersNewRoute
+  '/packs/': typeof PacksIndexRoute
+  '/servers/': typeof ServersIndexRoute
+  '/packs/$packId/edit': typeof PacksPackIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/packs' | '/servers/$serverId' | '/servers/new'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/packs'
+    | '/servers'
+    | '/setup'
+    | '/packs/new'
+    | '/servers/$serverId'
+    | '/servers/new'
+    | '/packs/'
+    | '/servers/'
+    | '/packs/$packId/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/packs' | '/servers/$serverId' | '/servers/new'
-  id: '__root__' | '/' | '/packs' | '/servers/$serverId' | '/servers/new'
+  to:
+    | '/'
+    | '/login'
+    | '/setup'
+    | '/packs/new'
+    | '/servers/$serverId'
+    | '/servers/new'
+    | '/packs'
+    | '/servers'
+    | '/packs/$packId/edit'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/packs'
+    | '/servers'
+    | '/setup'
+    | '/packs/new'
+    | '/servers/$serverId'
+    | '/servers/new'
+    | '/packs/'
+    | '/servers/'
+    | '/packs/$packId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  PacksRoute: typeof PacksRoute
-  ServersServerIdRoute: typeof ServersServerIdRoute
-  ServersNewRoute: typeof ServersNewRoute
+  LoginRoute: typeof LoginRoute
+  PacksRoute: typeof PacksRouteWithChildren
+  ServersRoute: typeof ServersRouteWithChildren
+  SetupRoute: typeof SetupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/servers': {
+      id: '/servers'
+      path: '/servers'
+      fullPath: '/servers'
+      preLoaderRoute: typeof ServersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/packs': {
       id: '/packs'
       path: '/packs'
       fullPath: '/packs'
       preLoaderRoute: typeof PacksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -85,28 +200,86 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/servers/': {
+      id: '/servers/'
+      path: '/'
+      fullPath: '/servers/'
+      preLoaderRoute: typeof ServersIndexRouteImport
+      parentRoute: typeof ServersRoute
+    }
+    '/packs/': {
+      id: '/packs/'
+      path: '/'
+      fullPath: '/packs/'
+      preLoaderRoute: typeof PacksIndexRouteImport
+      parentRoute: typeof PacksRoute
+    }
     '/servers/new': {
       id: '/servers/new'
-      path: '/servers/new'
+      path: '/new'
       fullPath: '/servers/new'
       preLoaderRoute: typeof ServersNewRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ServersRoute
     }
     '/servers/$serverId': {
       id: '/servers/$serverId'
-      path: '/servers/$serverId'
+      path: '/$serverId'
       fullPath: '/servers/$serverId'
       preLoaderRoute: typeof ServersServerIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof ServersRoute
+    }
+    '/packs/new': {
+      id: '/packs/new'
+      path: '/new'
+      fullPath: '/packs/new'
+      preLoaderRoute: typeof PacksNewRouteImport
+      parentRoute: typeof PacksRoute
+    }
+    '/packs/$packId/edit': {
+      id: '/packs/$packId/edit'
+      path: '/$packId/edit'
+      fullPath: '/packs/$packId/edit'
+      preLoaderRoute: typeof PacksPackIdEditRouteImport
+      parentRoute: typeof PacksRoute
     }
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  PacksRoute: PacksRoute,
+interface PacksRouteChildren {
+  PacksNewRoute: typeof PacksNewRoute
+  PacksIndexRoute: typeof PacksIndexRoute
+  PacksPackIdEditRoute: typeof PacksPackIdEditRoute
+}
+
+const PacksRouteChildren: PacksRouteChildren = {
+  PacksNewRoute: PacksNewRoute,
+  PacksIndexRoute: PacksIndexRoute,
+  PacksPackIdEditRoute: PacksPackIdEditRoute,
+}
+
+const PacksRouteWithChildren = PacksRoute._addFileChildren(PacksRouteChildren)
+
+interface ServersRouteChildren {
+  ServersServerIdRoute: typeof ServersServerIdRoute
+  ServersNewRoute: typeof ServersNewRoute
+  ServersIndexRoute: typeof ServersIndexRoute
+}
+
+const ServersRouteChildren: ServersRouteChildren = {
   ServersServerIdRoute: ServersServerIdRoute,
   ServersNewRoute: ServersNewRoute,
+  ServersIndexRoute: ServersIndexRoute,
+}
+
+const ServersRouteWithChildren =
+  ServersRoute._addFileChildren(ServersRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
+  PacksRoute: PacksRouteWithChildren,
+  ServersRoute: ServersRouteWithChildren,
+  SetupRoute: SetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

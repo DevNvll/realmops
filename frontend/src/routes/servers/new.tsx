@@ -2,13 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import { api } from "../../lib/api"
 import type { VariableConfig } from "../../lib/api"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,19 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Plus, Loader2 } from "lucide-react"
+import { Loader2, Box, ArrowRight, Check } from "lucide-react"
 import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/servers/new")({
   component: NewServerPage,
+  staticData: {
+    title: "New Server",
+  },
 })
 
 function VariableInput({
@@ -46,7 +36,7 @@ function VariableInput({
   if (variable.type === "select" && variable.options) {
     return (
       <Select value={String(value || "")} onValueChange={onChange}>
-        <SelectTrigger>
+        <SelectTrigger className="w-full">
           <SelectValue placeholder={`Select ${variable.label}`} />
         </SelectTrigger>
         <SelectContent>
@@ -66,7 +56,7 @@ function VariableInput({
         value={String(value || "false")}
         onValueChange={(v) => onChange(v === "true")}
       >
-        <SelectTrigger>
+        <SelectTrigger className="w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -85,6 +75,7 @@ function VariableInput({
         onChange={(e) => onChange(Number(e.target.value))}
         min={variable.min}
         max={variable.max}
+        className="w-full"
       />
     )
   }
@@ -94,6 +85,7 @@ function VariableInput({
       type="text"
       value={String(value || "")}
       onChange={(e) => onChange(e.target.value)}
+      className="w-full"
     />
   )
 }
@@ -131,7 +123,6 @@ function NewServerPage() {
     e.preventDefault()
     if (!selectedPackId || !serverName) return
 
-    // Merge default values with user-provided values
     const mergedVariables: Record<string, unknown> = {}
     if (selectedPack?.variables) {
       for (const variable of selectedPack.variables) {
@@ -148,97 +139,116 @@ function NewServerPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="py-4">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/">Servers</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>New Server</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </div>
-
-      <div className="max-w-2xl">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Create New Server
-            </CardTitle>
-            <CardDescription>
-              Configure and create a new game server instance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">Server Name</Label>
-                <Input
-                  id="name"
-                  value={serverName}
-                  onChange={(e) => setServerName(e.target.value)}
-                  placeholder="My Game Server"
-                  required
-                />
+    <div className="flex-1 p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Left column - Form */}
+        <div className="lg:col-span-2">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Server Name */}
+            <section className="border border-border bg-card">
+              <div className="px-5 py-4 border-b border-border">
+                <h2 className="text-sm font-bold uppercase tracking-wide text-textMain">Server Details</h2>
               </div>
+              <div className="p-5">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-xs font-bold uppercase text-textMuted">Server Name</Label>
+                  <Input
+                    id="name"
+                    value={serverName}
+                    onChange={(e) => setServerName(e.target.value)}
+                    placeholder="e.g. My Survival World"
+                    required
+                    className="h-11 text-base bg-transparent border-border focus-visible:ring-0 focus-visible:border-brand"
+                    autoFocus
+                  />
+                  <p className="text-xs text-textMuted">
+                    A friendly name to identify your server.
+                  </p>
+                </div>
+              </div>
+            </section>
 
-              <div className="space-y-2">
-                <Label htmlFor="pack">Game Pack</Label>
+            {/* Game Selection */}
+            <section className="border border-border bg-card">
+              <div className="px-5 py-4 border-b border-border">
+                <h2 className="text-sm font-bold uppercase tracking-wide text-textMain">Select Game</h2>
+              </div>
+              <div className="p-5">
                 {packsLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading packs...
+                  <div className="flex items-center justify-center p-12 border border-dashed border-border">
+                    <Loader2 className="h-6 w-6 animate-spin text-textMuted" />
                   </div>
                 ) : packs && packs.length > 0 ? (
-                  <Select
-                    value={selectedPackId}
-                    onValueChange={handlePackChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a game pack" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {packs.map((pack) => (
-                        <SelectItem key={pack.id} value={pack.id}>
-                          {pack.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {packs.map((pack) => (
+                      <button
+                        type="button"
+                        key={pack.id}
+                        onClick={() => handlePackChange(pack.id)}
+                        className={cn(
+                          "group relative flex items-start gap-4 p-4 border text-left transition-colors",
+                          selectedPackId === pack.id
+                            ? "border-brand bg-brand/5"
+                            : "border-border bg-transparent"
+                        )}
+                      >
+                        <div className={cn(
+                          "h-10 w-10 flex items-center justify-center shrink-0 border",
+                          selectedPackId === pack.id
+                            ? "bg-brand text-white border-brand"
+                            : "bg-surface text-textMuted border-border"
+                        )}>
+                          <Box className="h-5 w-5" />
+                        </div>
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-textMain truncate">{pack.name}</div>
+                          <p className="text-xs text-textMuted line-clamp-2">
+                            {pack.description}
+                          </p>
+                        </div>
+                        {selectedPackId === pack.id && (
+                          <div className="absolute top-3 right-3 h-5 w-5 bg-brand text-white flex items-center justify-center">
+                            <Check className="h-3 w-3" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No game packs available.{" "}
-                    <Link to="/packs" className="text-primary hover:underline">
-                      Import a pack
-                    </Link>{" "}
-                    first.
-                  </p>
+                  <div className="border border-dashed border-border p-8 text-center">
+                    <Box className="h-8 w-8 text-textMuted/50 mx-auto mb-3" />
+                    <h3 className="text-sm font-semibold text-textMain mb-1">No game packs found</h3>
+                    <p className="text-xs text-textMuted mb-4">
+                      Import a game pack before creating a server.
+                    </p>
+                    <Link to="/packs">
+                      <Button variant="outline" size="sm" className="border-border">
+                        Import Game Pack
+                      </Button>
+                    </Link>
+                  </div>
                 )}
               </div>
+            </section>
 
-              {selectedPack && selectedPack.variables.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Configuration</h3>
+            {/* Configuration */}
+            {selectedPack && selectedPack.variables.length > 0 && (
+              <section className="border border-border bg-card animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="px-5 py-4 border-b border-border">
+                  <h2 className="text-sm font-bold uppercase tracking-wide text-textMain">Configuration</h2>
+                  <p className="text-xs text-textMuted mt-1">
+                    Startup variables for {selectedPack.name}
+                  </p>
+                </div>
+                <div className="p-5 grid gap-5 sm:grid-cols-2">
                   {selectedPack.variables.map((variable) => (
                     <div key={variable.name} className="space-y-2">
-                      <Label htmlFor={variable.name}>
+                      <Label htmlFor={variable.name} className="flex items-center gap-1 text-xs font-bold uppercase text-textMuted">
                         {variable.label}
                         {variable.required && (
-                          <span className="text-destructive ml-1">*</span>
+                          <span className="text-destructive">*</span>
                         )}
                       </Label>
-                      {variable.description && (
-                        <p className="text-xs text-muted-foreground">
-                          {variable.description}
-                        </p>
-                      )}
                       <VariableInput
                         variable={variable}
                         value={variables[variable.name] ?? variable.default}
@@ -246,39 +256,78 @@ function NewServerPage() {
                           setVariables((v) => ({ ...v, [variable.name]: value }))
                         }
                       />
+                      {variable.description && (
+                        <p className="text-xs text-textMuted">
+                          {variable.description}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
-              )}
+              </section>
+            )}
+          </form>
+        </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={
-                  !selectedPackId || !serverName || createMutation.isPending
-                }
-              >
-                {createMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Server
-                  </>
+        {/* Right column - Summary & Action */}
+        <div className="lg:col-span-1">
+          <div className="border border-border bg-card sticky top-24">
+            <div className="px-5 py-4 border-b border-border">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-textMain">Summary</h2>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-textMuted">Server Name</span>
+                  <span className="text-textMain font-medium truncate ml-4">
+                    {serverName || "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-textMuted">Game</span>
+                  <span className="text-textMain font-medium">
+                    {selectedPack?.name || "—"}
+                  </span>
+                </div>
+                {selectedPack && (
+                  <div className="flex justify-between">
+                    <span className="text-textMuted">Variables</span>
+                    <span className="text-textMain font-medium">
+                      {selectedPack.variables.length}
+                    </span>
+                  </div>
                 )}
-              </Button>
+              </div>
 
-              {createMutation.error && (
-                <p className="text-sm text-destructive">
-                  {createMutation.error.message}
-                </p>
-              )}
-            </form>
-          </CardContent>
-        </Card>
+              <div className="pt-4 border-t border-border">
+                <Button
+                  type="submit"
+                  onClick={handleSubmit}
+                  disabled={!selectedPackId || !serverName || createMutation.isPending}
+                  className="w-full h-11 font-semibold bg-brand hover:bg-brand/90 text-white"
+                >
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deploying...
+                    </>
+                  ) : (
+                    <>
+                      Deploy Server
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
+
+                {createMutation.error && (
+                  <div className="mt-3 p-3 bg-destructive/10 text-destructive text-xs text-center">
+                    {createMutation.error.message}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"soar/internal/auth"
 	"soar/internal/config"
 	"soar/internal/db"
 	"soar/internal/docker"
@@ -26,6 +27,7 @@ type Server struct {
 	jobRunner      *jobs.Runner
 	logStreamer    *ws.LogStreamer
 	consoleHandler *ws.ConsoleHandler
+	authMiddleware *auth.Middleware
 	httpServer     *http.Server
 }
 
@@ -46,6 +48,7 @@ func NewServer(
 		jobRunner:      jobRunner,
 		logStreamer:    ws.NewLogStreamer(dockerProvider),
 		consoleHandler: ws.NewConsoleHandler(packLoader, rconManager),
+		authMiddleware: auth.NewMiddleware(cfg.AuthServiceURL),
 	}
 }
 
@@ -68,35 +71,48 @@ func (s *Server) Start() error {
 	}))
 
 	r.Route("/api", func(r chi.Router) {
+		// Health check is public
 		r.Get("/health", s.handleHealth)
 
-		r.Route("/servers", func(r chi.Router) {
-			r.Get("/", s.handleListServers)
-			r.Post("/", s.handleCreateServer)
-			r.Get("/{id}", s.handleGetServer)
-			r.Delete("/{id}", s.handleDeleteServer)
-			r.Post("/{id}/start", s.handleStartServer)
-			r.Post("/{id}/stop", s.handleStopServer)
-			r.Post("/{id}/restart", s.handleRestartServer)
-			r.Get("/{id}/logs", s.handleGetServerLogs)
-			r.Get("/{id}/logs/stream", s.handleStreamServerLogs)
-			r.Get("/{id}/console", s.handleConsoleWebSocket)
-			r.Get("/{id}/jobs", s.handleGetServerJobs)
-			r.Get("/{id}/files", s.handleListFiles)
-			r.Get("/{id}/files/*", s.handleGetFile)
-			r.Put("/{id}/files/*", s.handlePutFile)
-			r.Delete("/{id}/files/*", s.handleDeleteFile)
-		})
+		// Protected routes require authentication
+		r.Group(func(r chi.Router) {
+			r.Use(s.authMiddleware.RequireAuth)
 
-		r.Route("/packs", func(r chi.Router) {
-			r.Get("/", s.handleListPacks)
-			r.Post("/import", s.handleImportPack)
-			r.Post("/import-path", s.handleImportPackFromPath)
-			r.Get("/{id}", s.handleGetPack)
-		})
+			r.Route("/servers", func(r chi.Router) {
+				r.Get("/", s.handleListServers)
+				r.Post("/", s.handleCreateServer)
+				r.Get("/{id}", s.handleGetServer)
+				r.Delete("/{id}", s.handleDeleteServer)
+				r.Post("/{id}/start", s.handleStartServer)
+				r.Post("/{id}/stop", s.handleStopServer)
+				r.Post("/{id}/restart", s.handleRestartServer)
+				r.Get("/{id}/logs", s.handleGetServerLogs)
+				r.Get("/{id}/logs/stream", s.handleStreamServerLogs)
+				r.Get("/{id}/console", s.handleConsoleWebSocket)
+				r.Get("/{id}/jobs", s.handleGetServerJobs)
+				r.Get("/{id}/files", s.handleListFiles)
+				r.Get("/{id}/files/*", s.handleGetFile)
+				r.Put("/{id}/files/*", s.handlePutFile)
+				r.Delete("/{id}/files/*", s.handleDeleteFile)
+			})
 
-		r.Route("/jobs", func(r chi.Router) {
-			r.Get("/{id}", s.handleGetJob)
+			r.Route("/packs", func(r chi.Router) {
+				r.Get("/", s.handleListPacks)
+				r.Post("/", s.handleCreatePack)
+				r.Post("/import", s.handleImportPack)
+				r.Post("/import-path", s.handleImportPackFromPath)
+				r.Get("/{id}", s.handleGetPack)
+				r.Put("/{id}", s.handleUpdatePack)
+				r.Delete("/{id}", s.handleDeletePack)
+				r.Get("/{id}/files", s.handleListPackFiles)
+				r.Get("/{id}/files/*", s.handleListPackFiles)
+				r.Put("/{id}/files/*", s.handleUploadPackFile)
+				r.Delete("/{id}/files/*", s.handleDeletePackFile)
+			})
+
+			r.Route("/jobs", func(r chi.Router) {
+				r.Get("/{id}", s.handleGetJob)
+			})
 		})
 	})
 

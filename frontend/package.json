@@ -3,13 +3,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 3000",
+    "dev": "concurrently -n auth,vite -c blue,green \"pnpm run dev:auth\" \"pnpm run dev:vite\"",
+    "dev:vite": "vite --port 3000",
+    "dev:auth": "tsx watch server/index.ts",
     "build": "vite build && tsc",
     "preview": "vite preview",
     "test": "vitest run"
   },
   "dependencies": {
+    "@hono/node-server": "^1.14.3",
     "@hookform/resolvers": "^5.2.2",
+    "better-auth": "^1.4.10",
+    "better-sqlite3": "^12.0.0",
+    "hono": "^4.7.11",
+    "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -31,6 +38,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",
+    "radix-ui": "^1.4.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-hook-form": "^7.69.0",
@@ -40,6 +48,9 @@
     "zod": "^4.3.4"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "concurrently": "^9.2.0",
+    "tsx": "^4.20.3",
     "@tanstack/devtools-vite": "^0.3.11",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.2.0",
@@ -52,5 +63,10 @@
     "vite": "^7.1.7",
     "vitest": "^3.0.5",
     "web-vitals": "^5.1.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   }
 }

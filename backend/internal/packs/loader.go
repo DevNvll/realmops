@@ -312,3 +312,71 @@ func (l *Loader) ManifestToJSON(m *models.Manifest) (string, error) {
 	}
 	return string(data), nil
 }
+
+func (l *Loader) CreatePack(m *models.Manifest) error {
+	if err := l.Validate(m); err != nil {
+		return fmt.Errorf("pack validation failed: %w", err)
+	}
+
+	packDir := filepath.Join(l.packsDir, m.ID)
+	if err := os.MkdirAll(packDir, 0755); err != nil {
+		return fmt.Errorf("failed to create pack directory: %w", err)
+	}
+
+	manifestPath := filepath.Join(packDir, "pack.yaml")
+	data, err := yaml.Marshal(m)
+	if err != nil {
+		return fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write pack.yaml: %w", err)
+	}
+
+	return nil
+}
+
+func (l *Loader) UpdatePack(id string, m *models.Manifest) error {
+	packDir := filepath.Join(l.packsDir, id)
+	if _, err := os.Stat(packDir); os.IsNotExist(err) {
+		return fmt.Errorf("pack not found: %s", id)
+	}
+
+	if err := l.Validate(m); err != nil {
+		return fmt.Errorf("pack validation failed: %w", err)
+	}
+
+	// If ID changed, we need to rename the directory
+	if m.ID != id {
+		newPackDir := filepath.Join(l.packsDir, m.ID)
+		if err := os.Rename(packDir, newPackDir); err != nil {
+			return fmt.Errorf("failed to rename pack directory: %w", err)
+		}
+		packDir = newPackDir
+	}
+
+	manifestPath := filepath.Join(packDir, "pack.yaml")
+	data, err := yaml.Marshal(m)
+	if err != nil {
+		return fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	if err := os.WriteFile(manifestPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write pack.yaml: %w", err)
+	}
+
+	return nil
+}
+
+func (l *Loader) DeletePack(id string) error {
+	packDir := filepath.Join(l.packsDir, id)
+	if _, err := os.Stat(packDir); os.IsNotExist(err) {
+		return fmt.Errorf("pack not found: %s", id)
+	}
+
+	if err := os.RemoveAll(packDir); err != nil {
+		return fmt.Errorf("failed to delete pack: %w", err)
+	}
+
+	return nil
+}
