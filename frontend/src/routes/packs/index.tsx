@@ -26,6 +26,9 @@ import {
 import { Package, Upload, Loader2, FolderOpen, Box, FileCode, Network, Plus, Pencil, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { useHeaderActions } from "@/components/header-actions"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { ErrorAlert } from "@/components/error-alert"
+import { EmptyState } from "@/components/empty-state"
 
 export const Route = createFileRoute("/packs/")({
   component: PacksPage,
@@ -179,32 +182,16 @@ function PacksPage() {
         </p>
       </div>
 
-      {isLoading && (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      )}
+      {isLoading && <LoadingSpinner />}
 
-      {error && (
-        <div className="border-2 border-destructive bg-destructive/5 p-6">
-          <div className="pt-0">
-            <p className="text-destructive font-bold uppercase">
-              Failed to load packs: {error.message}
-            </p>
-          </div>
-        </div>
-      )}
+      {error && <ErrorAlert message="Failed to load packs" error={error} />}
 
       {packs && packs.length === 0 && (
-        <div className="border-2 border-dashed border-border bg-muted/20 p-12 text-center">
-          <div className="flex flex-col items-center justify-center">
-            <div className="h-16 w-16 bg-muted border-2 border-border flex items-center justify-center mb-4">
-              <Package className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-xl font-bold mb-2 uppercase">No game packs installed</h3>
-            <p className="text-muted-foreground max-w-sm mb-6 font-mono text-sm">
-              Import a pack.zip file or point to a folder to add support for a new game.
-            </p>
+        <EmptyState
+          icon={Package}
+          title="No game packs installed"
+          description="Import a pack.zip file or point to a folder to add support for a new game."
+          action={
             <div className="flex gap-3">
               <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="font-bold border-2">
                 <Upload className="h-4 w-4 mr-2" />
@@ -217,8 +204,8 @@ function PacksPage() {
                 </Button>
               </Link>
             </div>
-          </div>
-        </div>
+          }
+        />
       )}
 
       {packs && packs.length > 0 && (

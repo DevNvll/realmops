@@ -183,19 +183,6 @@ export function ConsoleTab({ serverId, serverState, rconEnabled, isInstalled }: 
     }
   }
 
-  const getStatusBadgeVariant = (): 'default' | 'secondary' | 'destructive' | 'outline' => {
-    switch (connectionStatus) {
-      case 'connected':
-        return 'default'
-      case 'connecting':
-        return 'secondary'
-      case 'error':
-        return 'destructive'
-      default:
-        return 'outline'
-    }
-  }
-
   if (rconEnabled === undefined) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">

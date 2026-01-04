@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
-import type { ServerState, FileEntry } from '../../lib/api'
+import { formatBytes, getStateColor } from '../../lib/utils'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import {
@@ -10,8 +10,6 @@ import {
   TabsList,
   TabsTrigger
 } from '../../components/ui/tabs'
-import { ScrollArea } from '../../components/ui/scroll-area'
-import Editor from '@monaco-editor/react'
 import {
   Play,
   Square,
@@ -20,18 +18,17 @@ import {
   Loader2,
   Terminal,
   FolderOpen,
-  FileText,
-  Folder,
-  Save,
-  RefreshCw,
   TerminalSquare,
   Cpu,
   MemoryStick,
   Network,
   Box
 } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
 import { ConsoleTab } from '../../components/server/ConsoleTab'
+import { LogsTab } from '../../components/server/LogsTab'
+import { FilesTab } from '../../components/server/FilesTab'
+import { LoadingSpinner } from '../../components/loading-spinner'
+import { ErrorAlert } from '../../components/error-alert'
 
 export const Route = createFileRoute('/servers/$serverId')({
   component: ServerDetailPage,
@@ -39,355 +36,6 @@ export const Route = createFileRoute('/servers/$serverId')({
     title: 'Server Details'
   }
 })
-
-function getStateColor(state: ServerState): string {
-  switch (state) {
-    case 'running':
-      return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20'
-    case 'starting':
-      return 'text-blue-500 bg-blue-500/10 border-blue-500/20 animate-pulse'
-    case 'stopping':
-      return 'text-orange-500 bg-orange-500/10 border-orange-500/20'
-    case 'error':
-      return 'text-red-500 bg-red-500/10 border-red-500/20'
-    default:
-      return 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20'
-  }
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
-}
-
-function LogsTab({
-  serverId,
-  containerID
-}: {
-  serverId: string
-  containerID?: string
-}) {
-  const [logs, setLogs] = useState<string[]>([])
-  const [connectionError, setConnectionError] = useState(false)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const wsRef = useRef<WebSocket | null>(null)
-  const retryTimeoutRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    if (!containerID) return
-
-    const connect = () => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) return
-
-      const wsUrl = (
-        import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
-      )
-        .replace('http', 'ws')
-        .replace('/api', '')
-      const ws = new WebSocket(`${wsUrl}/api/servers/${serverId}/logs/stream`)
-      wsRef.current = ws
-
-      ws.onopen = () => {
-        setConnectionError(false)
-      }
-
-      ws.onmessage = (event) => {
-        setLogs((prev) => [...prev.slice(-500), event.data])
-      }
-
-      ws.onerror = () => {
-        setConnectionError(true)
-      }
-
-      ws.onclose = () => {
-        // Retry connection after 2 seconds if container exists
-        if (containerID) {
-          retryTimeoutRef.current = window.setTimeout(connect, 2000)
-        }
-      }
-    }
-
-    connect()
-
-    return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current)
-      }
-      wsRef.current?.close()
-    }
-  }, [serverId, containerID])
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [logs])
-
-  if (!containerID) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-        <Terminal className="h-8 w-8 mb-2 opacity-50" />
-        <p>Server not installed yet.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative flex flex-col h-full min-h-0">
-      {/* Floating action buttons */}
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-        <div className="flex items-center gap-1.5 bg-zinc-900/80 backdrop-blur-sm px-2 py-1 rounded text-xs">
-          <span className="relative flex h-2 w-2">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${connectionError ? 'bg-red-400' : 'bg-emerald-400'}`}></span>
-            <span className={`relative inline-flex rounded-full h-2 w-2 ${connectionError ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
-          </span>
-          <span className="text-zinc-400">{connectionError ? 'Disconnected' : 'Live'}</span>
-        </div>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => setLogs([])}
-          className="h-7 text-xs bg-zinc-900/80 backdrop-blur-sm hover:bg-zinc-800"
-        >
-          <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-          Clear
-        </Button>
-      </div>
-      {/* Full-screen log content */}
-      <div
-        ref={scrollRef}
-        className="flex-1 min-h-0 w-full bg-[#0a0a0a] p-4 pt-14 font-mono text-xs overflow-y-auto"
-      >
-        <div className="space-y-1">
-          {logs.length === 0 ? (
-            <span className="text-zinc-600 italic">Waiting for logs...</span>
-          ) : (
-            logs.map((log, i) => (
-              <div
-                key={i}
-                className="whitespace-pre-wrap break-all text-zinc-300 border-l-2 border-transparent hover:border-emerald-500/50 hover:bg-emerald-500/5 pl-2 -ml-2 py-0.5 transition-colors"
-              >
-                {log}
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function getLanguageFromFilename(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase() || ''
-  const languageMap: Record<string, string> = {
-    // Config files
-    json: 'json',
-    yaml: 'yaml',
-    yml: 'yaml',
-    toml: 'ini',
-    ini: 'ini',
-    cfg: 'ini',
-    conf: 'ini',
-    properties: 'ini',
-    // Programming
-    js: 'javascript',
-    ts: 'typescript',
-    jsx: 'javascript',
-    tsx: 'typescript',
-    py: 'python',
-    java: 'java',
-    lua: 'lua',
-    sh: 'shell',
-    bash: 'shell',
-    bat: 'bat',
-    ps1: 'powershell',
-    // Web
-    html: 'html',
-    htm: 'html',
-    css: 'css',
-    scss: 'scss',
-    xml: 'xml',
-    // Data
-    sql: 'sql',
-    md: 'markdown',
-    txt: 'plaintext',
-    log: 'plaintext'
-  }
-  return languageMap[ext] || 'plaintext'
-}
-
-function FilesTab({ serverId }: { serverId: string }) {
-  const [currentPath, setCurrentPath] = useState('')
-  const [selectedFile, setSelectedFile] = useState<string | null>(null)
-  const [fileContent, setFileContent] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [loadingFile, setLoadingFile] = useState(false)
-
-  const { data: files, isLoading } = useQuery({
-    queryKey: ['server-files', serverId, currentPath],
-    queryFn: () => api.servers.files.list(serverId, currentPath)
-  })
-
-  const handleNavigate = async (entry: FileEntry) => {
-    if (entry.isDir) {
-      setCurrentPath(currentPath ? `${currentPath}/${entry.name}` : entry.name)
-      setSelectedFile(null)
-    } else {
-      const filePath = currentPath ? `${currentPath}/${entry.name}` : entry.name
-      setLoadingFile(true)
-      setSelectedFile(filePath)
-      try {
-        const content = await api.servers.files.get(serverId, filePath)
-        setFileContent(content)
-      } finally {
-        setLoadingFile(false)
-      }
-    }
-  }
-
-  const handleBack = () => {
-    const parts = currentPath.split('/')
-    parts.pop()
-    setCurrentPath(parts.join('/'))
-    setSelectedFile(null)
-  }
-
-  const handleSave = async () => {
-    if (!selectedFile) return
-    setSaving(true)
-    try {
-      await api.servers.files.put(serverId, selectedFile, fileContent)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-      <div className="lg:col-span-1 flex flex-col h-full border-2 border-border bg-card">
-        <div className="py-3 px-4 border-b-2 border-border bg-muted/30">
-          <div className="flex items-center gap-2 text-sm font-bold overflow-hidden font-mono">
-            <FolderOpen className="h-4 w-4 shrink-0" />
-            <span className="truncate" title={`/${currentPath}`}>
-              /{currentPath}
-            </span>
-          </div>
-        </div>
-        <div className="p-0 flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="p-2 space-y-0.5">
-              {currentPath && (
-                <div
-                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted rounded-none cursor-pointer text-sm transition-colors font-mono"
-                  onClick={handleBack}
-                >
-                  <Folder className="h-4 w-4 text-blue-500 fill-blue-500/20" />
-                  <span className="font-bold">..</span>
-                </div>
-              )}
-              {isLoading ? (
-                <div className="flex justify-center p-4">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                files?.map((entry) => (
-                  <div
-                    key={entry.name}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded-none cursor-pointer text-sm transition-colors font-mono ${
-                      selectedFile?.endsWith(entry.name)
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-muted'
-                    }`}
-                    onClick={() => handleNavigate(entry)}
-                  >
-                    {entry.isDir ? (
-                      <Folder className="h-4 w-4 text-blue-500 fill-blue-500/20" />
-                    ) : (
-                      <FileText className="h-4 w-4" />
-                    )}
-                    <span className="truncate flex-1">{entry.name}</span>
-                    {!entry.isDir && (
-                      <span className="text-xs opacity-70 tabular-nums">
-                        {formatBytes(entry.size)}
-                      </span>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-      </div>
-
-      <div className="lg:col-span-2 flex flex-col h-full border-2 border-border bg-card">
-        {selectedFile ? (
-          <>
-            <div className="py-2 px-4 border-b-2 border-border bg-muted/30 min-h-[53px] flex flex-row items-center justify-between space-y-0">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                <span className="font-bold text-sm font-mono">
-                  {selectedFile}
-                </span>
-              </div>
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={saving}
-                className="h-8 shadow-none"
-              >
-                {saving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                ) : (
-                  <Save className="h-3.5 w-3.5 mr-1.5" />
-                )}
-                SAVE
-              </Button>
-            </div>
-            <div className="flex-1 min-h-0">
-              {loadingFile ? (
-                <div className="flex items-center justify-center h-full bg-[#1e1e1e]">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <Editor
-                  key={selectedFile}
-                  height="100%"
-                  language={getLanguageFromFilename(selectedFile)}
-                  value={fileContent}
-                  onChange={(value) => setFileContent(value || '')}
-                  theme="vs-dark"
-                  loading={
-                    <div className="flex items-center justify-center h-full bg-[#1e1e1e]">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                  }
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 13,
-                    lineNumbers: 'on',
-                    scrollBeyondLastLine: false,
-                    wordWrap: 'on',
-                    automaticLayout: true,
-                    tabSize: 2,
-                    padding: { top: 12, bottom: 12 }
-                  }}
-                />
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <FileText className="h-12 w-12 mb-4 opacity-20" />
-            <p className="font-mono uppercase">Select a file to view or edit</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 function ServerDetailPage() {
   const { serverId } = Route.useParams()
@@ -434,21 +82,13 @@ function ServerDetailPage() {
   })
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-[calc(100vh-4rem)]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+    return <LoadingSpinner className="h-[calc(100vh-4rem)]" />
   }
 
   if (error || !server) {
     return (
       <div className="container mx-auto p-8">
-        <div className="border-2 border-destructive bg-destructive/5 p-6">
-          <p className="text-destructive font-bold uppercase">
-            Failed to load server: {error?.message || 'Not found'}
-          </p>
-        </div>
+        <ErrorAlert message="Failed to load server" error={error || new Error('Not found')} />
       </div>
     )
   }
@@ -477,7 +117,7 @@ function ServerDetailPage() {
                   </h1>
                   <Badge
                     variant="outline"
-                    className={`${getStateColor(server.state)} border-2 rounded-none`}
+                    className={`${getStateColor(server.state, 'badge')} border-2 rounded-none`}
                   >
                     {server.state}
                   </Badge>
