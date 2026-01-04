@@ -249,3 +249,38 @@ export interface SFTPStatus {
   hostFingerprint?: string;
   activeSessions?: number;
 }
+
+// System config types
+export interface SystemConfigRunning {
+  sftpEnabled: boolean;
+  sftpPort: number;
+  portRangeStart: number;
+  portRangeEnd: number;
+  dockerHost: string;
+  dataDir: string;
+  databasePath: string;
+  packsDir: string;
+}
+
+export interface SystemConfigSaved {
+  sftpEnabled?: boolean;
+  sftpPort?: string;
+  portRangeStart?: number;
+  portRangeEnd?: number;
+  dockerHost?: string;
+}
+
+export interface SystemConfig {
+  running: SystemConfigRunning;
+  saved: SystemConfigSaved;
+  pendingRestart: boolean;
+  dockerConnected: boolean;
+}
+
+export interface UpdateSystemConfigRequest {
+  sftpEnabled?: boolean;
+  sftpPort?: number;
+  portRangeStart?: number;
+  portRangeEnd?: number;
+  dockerHost?: string;
+}

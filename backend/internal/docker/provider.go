@@ -46,6 +46,13 @@ func (p *Provider) Close() error {
 	return p.client.Close()
 }
 
+func (p *Provider) IsConnected() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, err := p.client.Ping(ctx)
+	return err == nil
+}
+
 type CreateContainerOptions struct {
 	Name       string
 	Image      string

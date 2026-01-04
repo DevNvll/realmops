@@ -1,10 +1,12 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"sync"
 )
 
 type Config struct {
@@ -20,6 +22,19 @@ type Config struct {
 	SFTPEnabled     bool
 	SFTPPort        string
 	SFTPHostKeyPath string
+
+	// mu protects savedConfig
+	mu          sync.RWMutex
+	savedConfig *SavedConfig
+}
+
+// SavedConfig represents user-configurable settings persisted to disk
+type SavedConfig struct {
+	SFTPEnabled    *bool   `json:"sftpEnabled,omitempty"`
+	SFTPPort       *string `json:"sftpPort,omitempty"`
+	PortRangeStart *int    `json:"portRangeStart,omitempty"`
+	PortRangeEnd   *int    `json:"portRangeEnd,omitempty"`
+	DockerHost     *string `json:"dockerHost,omitempty"`
 }
 
 func Load() (*Config, error) {
@@ -94,4 +109,116 @@ func getEnvBool(key string, defaultValue bool) bool {
 		}
 	}
 	return defaultValue
+}
+
+// GetConfigFilePath returns the path to the config.json file
+func (c *Config) GetConfigFilePath() string {
+	return filepath.Join(c.DataDir, "config.json")
+}
+
+// LoadSavedConfig loads user-configured settings from config.json
+func (c *Config) LoadSavedConfig() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	configPath := c.GetConfigFilePath()
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			c.savedConfig = &SavedConfig{}
+			return nil
+		}
+		return err
+	}
+
+	var saved SavedConfig
+	if err := json.Unmarshal(data, &saved); err != nil {
+		return err
+	}
+
+	c.savedConfig = &saved
+
+	// Apply saved config overrides
+	if saved.SFTPEnabled != nil {
+		c.SFTPEnabled = *saved.SFTPEnabled
+	}
+	if saved.SFTPPort != nil {
+		c.SFTPPort = *saved.SFTPPort
+	}
+	if saved.PortRangeStart != nil {
+		c.PortRangeStart = *saved.PortRangeStart
+	}
+	if saved.PortRangeEnd != nil {
+		c.PortRangeEnd = *saved.PortRangeEnd
+	}
+	if saved.DockerHost != nil {
+		c.DockerHost = *saved.DockerHost
+	}
+
+	return nil
+}
+
+// SaveConfig saves user-configured settings to config.json
+func (c *Config) SaveConfig(saved *SavedConfig) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	configPath := c.GetConfigFilePath()
+
+	// Ensure directory exists
+	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+		return err
+	}
+
+	data, err := json.MarshalIndent(saved, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
+		return err
+	}
+
+	c.savedConfig = saved
+	return nil
+}
+
+// GetSavedConfig returns the current saved config
+func (c *Config) GetSavedConfig() *SavedConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.savedConfig == nil {
+		return &SavedConfig{}
+	}
+	return c.savedConfig
+}
+
+// HasPendingChanges checks if saved config differs from running config
+func (c *Config) HasPendingChanges() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	if c.savedConfig == nil {
+		return false
+	}
+
+	// Compare saved values to running values
+	if c.savedConfig.SFTPEnabled != nil && *c.savedConfig.SFTPEnabled != c.SFTPEnabled {
+		return true
+	}
+	if c.savedConfig.SFTPPort != nil && *c.savedConfig.SFTPPort != c.SFTPPort {
+		return true
+	}
+	if c.savedConfig.PortRangeStart != nil && *c.savedConfig.PortRangeStart != c.PortRangeStart {
+		return true
+	}
+	if c.savedConfig.PortRangeEnd != nil && *c.savedConfig.PortRangeEnd != c.PortRangeEnd {
+		return true
+	}
+	if c.savedConfig.DockerHost != nil && *c.savedConfig.DockerHost != c.DockerHost {
+		return true
+	}
+
+	return false
 }

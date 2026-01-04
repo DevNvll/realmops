@@ -936,3 +936,140 @@ func (s *Server) handleGetSFTPStatus(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, response)
 }
+
+// System config handlers
+
+type SystemConfigResponse struct {
+	// Running configuration (read-only)
+	Running struct {
+		SFTPEnabled    bool   `json:"sftpEnabled"`
+		SFTPPort       int    `json:"sftpPort"`
+		PortRangeStart int    `json:"portRangeStart"`
+		PortRangeEnd   int    `json:"portRangeEnd"`
+		DockerHost     string `json:"dockerHost"`
+		DataDir        string `json:"dataDir"`
+		DatabasePath   string `json:"databasePath"`
+		PacksDir       string `json:"packsDir"`
+	} `json:"running"`
+
+	// Saved configuration (can differ from running if restart needed)
+	Saved struct {
+		SFTPEnabled    *bool   `json:"sftpEnabled,omitempty"`
+		SFTPPort       *string `json:"sftpPort,omitempty"`
+		PortRangeStart *int    `json:"portRangeStart,omitempty"`
+		PortRangeEnd   *int    `json:"portRangeEnd,omitempty"`
+		DockerHost     *string `json:"dockerHost,omitempty"`
+	} `json:"saved"`
+
+	// Status info
+	PendingRestart bool `json:"pendingRestart"`
+	DockerConnected bool `json:"dockerConnected"`
+}
+
+func (s *Server) handleGetSystemConfig(w http.ResponseWriter, r *http.Request) {
+	// Parse port from config
+	port := 2022
+	if s.cfg.SFTPPort != "" {
+		portStr := strings.TrimPrefix(s.cfg.SFTPPort, ":")
+		fmt.Sscanf(portStr, "%d", &port)
+	}
+
+	response := SystemConfigResponse{
+		PendingRestart: s.cfg.HasPendingChanges(),
+		DockerConnected: dockerProviderInstance != nil && dockerProviderInstance.IsConnected(),
+	}
+
+	// Running config
+	response.Running.SFTPEnabled = s.cfg.SFTPEnabled
+	response.Running.SFTPPort = port
+	response.Running.PortRangeStart = s.cfg.PortRangeStart
+	response.Running.PortRangeEnd = s.cfg.PortRangeEnd
+	response.Running.DockerHost = s.cfg.DockerHost
+	response.Running.DataDir = s.cfg.DataDir
+	response.Running.DatabasePath = s.cfg.DatabasePath
+	response.Running.PacksDir = s.cfg.PacksDir
+
+	// Saved config
+	saved := s.cfg.GetSavedConfig()
+	response.Saved.SFTPEnabled = saved.SFTPEnabled
+	response.Saved.SFTPPort = saved.SFTPPort
+	response.Saved.PortRangeStart = saved.PortRangeStart
+	response.Saved.PortRangeEnd = saved.PortRangeEnd
+	response.Saved.DockerHost = saved.DockerHost
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+type UpdateConfigRequest struct {
+	SFTPEnabled    *bool   `json:"sftpEnabled,omitempty"`
+	SFTPPort       *int    `json:"sftpPort,omitempty"`
+	PortRangeStart *int    `json:"portRangeStart,omitempty"`
+	PortRangeEnd   *int    `json:"portRangeEnd,omitempty"`
+	DockerHost     *string `json:"dockerHost,omitempty"`
+}
+
+func (s *Server) handleUpdateSystemConfig(w http.ResponseWriter, r *http.Request) {
+	var req UpdateConfigRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Get current saved config and merge updates
+	saved := s.cfg.GetSavedConfig()
+
+	if req.SFTPEnabled != nil {
+		saved.SFTPEnabled = req.SFTPEnabled
+	}
+	if req.SFTPPort != nil {
+		portStr := fmt.Sprintf(":%d", *req.SFTPPort)
+		saved.SFTPPort = &portStr
+	}
+	if req.PortRangeStart != nil {
+		saved.PortRangeStart = req.PortRangeStart
+	}
+	if req.PortRangeEnd != nil {
+		saved.PortRangeEnd = req.PortRangeEnd
+	}
+	if req.DockerHost != nil {
+		saved.DockerHost = req.DockerHost
+	}
+
+	// Validate port range
+	start := s.cfg.PortRangeStart
+	end := s.cfg.PortRangeEnd
+	if saved.PortRangeStart != nil {
+		start = *saved.PortRangeStart
+	}
+	if saved.PortRangeEnd != nil {
+		end = *saved.PortRangeEnd
+	}
+	if start >= end {
+		writeError(w, http.StatusBadRequest, "port range start must be less than end")
+		return
+	}
+	if start < 1024 || end > 65535 {
+		writeError(w, http.StatusBadRequest, "port range must be between 1024 and 65535")
+		return
+	}
+
+	// Save to file
+	if err := s.cfg.SaveConfig(saved); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save config: "+err.Error())
+		return
+	}
+
+	// Return updated config
+	s.handleGetSystemConfig(w, r)
+}
+
+// Docker provider interface for checking connection status
+var dockerProviderInstance DockerProviderInterface
+
+type DockerProviderInterface interface {
+	IsConnected() bool
+}
+
+func SetDockerProvider(provider DockerProviderInterface) {
+	dockerProviderInstance = provider
+}

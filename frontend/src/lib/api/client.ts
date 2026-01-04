@@ -9,7 +9,9 @@ import type {
   CreateSSHKeyRequest,
   SFTPConfig,
   UpdateSFTPConfigRequest,
-  SFTPStatus
+  SFTPStatus,
+  SystemConfig,
+  UpdateSystemConfigRequest
 } from './types';
 
 const API_BASE = '/api';
@@ -138,6 +140,12 @@ export const api = {
   system: {
     info: () => request<{ hostIP: string }>('/system/info'),
     sftpStatus: () => request<SFTPStatus>('/system/sftp-status'),
+    config: () => request<SystemConfig>('/system/config'),
+    updateConfig: (data: UpdateSystemConfigRequest) =>
+      request<SystemConfig>('/system/config', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
   },
   sshKeys: {
     list: () => request<SSHKey[]>('/ssh-keys'),

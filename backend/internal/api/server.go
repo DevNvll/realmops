@@ -138,6 +138,10 @@ func (s *Server) Start() error {
 
 			// System SFTP status
 			r.Get("/system/sftp-status", s.handleGetSFTPStatus)
+
+			// System configuration
+			r.Get("/system/config", s.handleGetSystemConfig)
+			r.Patch("/system/config", s.handleUpdateSystemConfig)
 		})
 	})
 

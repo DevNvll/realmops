@@ -32,6 +32,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Load saved config overrides from config.json
+	if err := cfg.LoadSavedConfig(); err != nil {
+		slog.Warn("failed to load saved config", "error", err)
+	}
+
 	database, err := db.New(cfg.DatabasePath)
 	if err != nil {
 		slog.Error("failed to initialize database", "error", err)
@@ -50,6 +55,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer dockerRuntime.Close()
+
+	// Set docker provider for API status endpoint
+	api.SetDockerProvider(dockerRuntime)
 
 	packLoader := packs.NewLoader(cfg.PacksDir)
 

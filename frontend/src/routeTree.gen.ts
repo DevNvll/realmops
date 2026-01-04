@@ -19,6 +19,8 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ServersIndexRouteImport } from './routes/servers/index'
 import { Route as PacksIndexRouteImport } from './routes/packs/index'
 import { Route as SettingsSshKeysRouteImport } from './routes/settings/ssh-keys'
+import { Route as SettingsServerRouteImport } from './routes/settings/server'
+import { Route as SettingsAccountRouteImport } from './routes/settings/account'
 import { Route as ServersNewRouteImport } from './routes/servers/new'
 import { Route as ServersServerIdRouteImport } from './routes/servers/$serverId'
 import { Route as PacksNewRouteImport } from './routes/packs/new'
@@ -74,6 +76,16 @@ const SettingsSshKeysRoute = SettingsSshKeysRouteImport.update({
   path: '/ssh-keys',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsServerRoute = SettingsServerRouteImport.update({
+  id: '/server',
+  path: '/server',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsAccountRoute = SettingsAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const ServersNewRoute = ServersNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -105,6 +117,8 @@ export interface FileRoutesByFullPath {
   '/packs/new': typeof PacksNewRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/servers/new': typeof ServersNewRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/server': typeof SettingsServerRoute
   '/settings/ssh-keys': typeof SettingsSshKeysRoute
   '/packs/': typeof PacksIndexRoute
   '/servers/': typeof ServersIndexRoute
@@ -118,6 +132,8 @@ export interface FileRoutesByTo {
   '/packs/new': typeof PacksNewRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/servers/new': typeof ServersNewRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/server': typeof SettingsServerRoute
   '/settings/ssh-keys': typeof SettingsSshKeysRoute
   '/packs': typeof PacksIndexRoute
   '/servers': typeof ServersIndexRoute
@@ -135,6 +151,8 @@ export interface FileRoutesById {
   '/packs/new': typeof PacksNewRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/servers/new': typeof ServersNewRoute
+  '/settings/account': typeof SettingsAccountRoute
+  '/settings/server': typeof SettingsServerRoute
   '/settings/ssh-keys': typeof SettingsSshKeysRoute
   '/packs/': typeof PacksIndexRoute
   '/servers/': typeof ServersIndexRoute
@@ -153,6 +171,8 @@ export interface FileRouteTypes {
     | '/packs/new'
     | '/servers/$serverId'
     | '/servers/new'
+    | '/settings/account'
+    | '/settings/server'
     | '/settings/ssh-keys'
     | '/packs/'
     | '/servers/'
@@ -166,6 +186,8 @@ export interface FileRouteTypes {
     | '/packs/new'
     | '/servers/$serverId'
     | '/servers/new'
+    | '/settings/account'
+    | '/settings/server'
     | '/settings/ssh-keys'
     | '/packs'
     | '/servers'
@@ -182,6 +204,8 @@ export interface FileRouteTypes {
     | '/packs/new'
     | '/servers/$serverId'
     | '/servers/new'
+    | '/settings/account'
+    | '/settings/server'
     | '/settings/ssh-keys'
     | '/packs/'
     | '/servers/'
@@ -270,6 +294,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSshKeysRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/server': {
+      id: '/settings/server'
+      path: '/server'
+      fullPath: '/settings/server'
+      preLoaderRoute: typeof SettingsServerRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/account': {
+      id: '/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof SettingsAccountRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/servers/new': {
       id: '/servers/new'
       path: '/new'
@@ -331,11 +369,15 @@ const ServersRouteWithChildren =
   ServersRoute._addFileChildren(ServersRouteChildren)
 
 interface SettingsRouteChildren {
+  SettingsAccountRoute: typeof SettingsAccountRoute
+  SettingsServerRoute: typeof SettingsServerRoute
   SettingsSshKeysRoute: typeof SettingsSshKeysRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsAccountRoute: SettingsAccountRoute,
+  SettingsServerRoute: SettingsServerRoute,
   SettingsSshKeysRoute: SettingsSshKeysRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }

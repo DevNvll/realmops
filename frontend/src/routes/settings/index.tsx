@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/settings/')({
-  component: () => <Navigate to="/settings/ssh-keys" />
+  component: () => <Navigate to="/settings/account" />
 })

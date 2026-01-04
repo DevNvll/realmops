@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useRouterState } from '@tanstack/react-router'
-import { Key, Shield } from 'lucide-react'
+import { Key, Server, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/settings')({
@@ -11,17 +11,22 @@ export const Route = createFileRoute('/settings')({
 
 const settingsNav = [
   {
+    title: 'Account',
+    href: '/settings/account',
+    icon: User,
+    description: 'Profile and password settings',
+  },
+  {
+    title: 'Server',
+    href: '/settings/server',
+    icon: Server,
+    description: 'SFTP, ports, and system configuration',
+  },
+  {
     title: 'SSH Keys',
     href: '/settings/ssh-keys',
     icon: Key,
     description: 'Manage SSH keys for SFTP access',
-  },
-  {
-    title: 'Security',
-    href: '/settings/security',
-    icon: Shield,
-    description: 'Security and authentication settings',
-    disabled: true,
   },
 ]
 
@@ -46,30 +51,18 @@ function SettingsLayout() {
               const isActive = currentPath === item.href || currentPath.startsWith(item.href + '/')
               return (
                 <li key={item.href}>
-                  {item.disabled ? (
-                    <div
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 text-sm rounded-md cursor-not-allowed opacity-50",
-                        "text-muted-foreground"
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </div>
-                  ) : (
-                    <Link
-                      to={item.href}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
-                        isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  )}
+                  <Link
+                    to={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                      isActive
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
                 </li>
               )
             })}
