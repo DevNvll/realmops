@@ -67,7 +67,7 @@ function SidebarHeaderContent() {
           <Gamepad2 className="size-4 text-white" />
         </div>
         {!isCollapsed && (
-          <span className="text-lg font-bold tracking-tight uppercase text-textMain">Soar</span>
+          <span className="text-lg font-bold tracking-tight uppercase text-textMain">RealmOps</span>
         )}
       </Link>
     </SidebarHeader>

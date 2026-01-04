@@ -161,7 +161,7 @@ function RootLayout() {
 
   if (isLoading) {
     return (
-      <ThemeProvider defaultTheme="dark" storageKey="soar-ui-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="realmops-ui-theme">
         <LoadingScreen />
       </ThemeProvider>
     )
@@ -170,7 +170,7 @@ function RootLayout() {
   const isAuthenticated = !!session?.user
 
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="soar-ui-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="realmops-ui-theme">
       {isAuthPage || !isAuthenticated ? (
         <UnauthenticatedLayout />
       ) : (

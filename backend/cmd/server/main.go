@@ -7,15 +7,15 @@ import (
 	"os/signal"
 	"syscall"
 
-	"soar/internal/api"
-	"soar/internal/config"
-	"soar/internal/db"
-	"soar/internal/docker"
-	"soar/internal/jobs"
-	"soar/internal/packs"
-	"soar/internal/ports"
-	"soar/internal/rcon"
-	"soar/internal/server"
+	"realmops/internal/api"
+	"realmops/internal/config"
+	"realmops/internal/db"
+	"realmops/internal/docker"
+	"realmops/internal/jobs"
+	"realmops/internal/packs"
+	"realmops/internal/ports"
+	"realmops/internal/rcon"
+	"realmops/internal/server"
 )
 
 func main() {

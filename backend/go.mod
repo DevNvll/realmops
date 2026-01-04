@@ -1,4 +1,4 @@
-module soar
+module realmops
 
 go 1.22.3
 

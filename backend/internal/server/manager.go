@@ -13,12 +13,12 @@ import (
 	"text/template"
 	"time"
 
-	"soar/internal/db"
-	"soar/internal/docker"
-	"soar/internal/jobs"
-	"soar/internal/models"
-	"soar/internal/packs"
-	"soar/internal/ports"
+	"realmops/internal/db"
+	"realmops/internal/docker"
+	"realmops/internal/jobs"
+	"realmops/internal/models"
+	"realmops/internal/packs"
+	"realmops/internal/ports"
 )
 
 type Manager struct {

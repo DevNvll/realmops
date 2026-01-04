@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"soar/internal/db"
-	"soar/internal/models"
+	"realmops/internal/db"
+	"realmops/internal/models"
 )
 
 type JobHandler func(ctx context.Context, job *models.Job) error

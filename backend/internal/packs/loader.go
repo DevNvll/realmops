@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
-	"soar/internal/models"
+	"realmops/internal/models"
 )
 
 type Loader struct {

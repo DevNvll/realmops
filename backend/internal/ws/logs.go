@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"soar/internal/docker"
+	"realmops/internal/docker"
 )
 
 var upgrader = websocket.Upgrader{

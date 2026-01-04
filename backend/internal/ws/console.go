@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"soar/internal/models"
-	"soar/internal/packs"
-	"soar/internal/rcon"
+	"realmops/internal/models"
+	"realmops/internal/packs"
+	"realmops/internal/rcon"
 )
 
 type ConsoleMessage struct {

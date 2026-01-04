@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"soar/internal/db"
+	"realmops/internal/db"
 )
 
 type Allocator struct {

@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"soar/internal/models"
-	"soar/internal/server"
+	"realmops/internal/models"
+	"realmops/internal/server"
 )
 
 func writeJSON(w http.ResponseWriter, status int, data any) {
