@@ -204,3 +204,48 @@ export interface ConsoleResponse {
   payload: string;
   time: string;
 }
+
+// SSH Key types
+export interface SSHKey {
+  id: string;
+  name: string;
+  publicKey: string;
+  fingerprint: string;
+  keyType: 'ssh-rsa' | 'ssh-ed25519' | 'ecdsa-sha2-nistp256' | 'ecdsa-sha2-nistp384' | 'ecdsa-sha2-nistp521';
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
+export interface CreateSSHKeyRequest {
+  name: string;
+  publicKey: string;
+}
+
+// SFTP Config types
+export interface SFTPConnectionInfo {
+  host: string;
+  port: number;
+  username: string;
+}
+
+export interface SFTPConfig {
+  enabled: boolean;
+  sshKeyId?: string;
+  sshKeyName?: string;
+  username: string;
+  hasPassword: boolean;
+  connectionInfo: SFTPConnectionInfo;
+}
+
+export interface UpdateSFTPConfigRequest {
+  enabled?: boolean;
+  sshKeyId?: string;
+}
+
+export interface SFTPStatus {
+  running: boolean;
+  enabled: boolean;
+  port: number;
+  hostFingerprint?: string;
+  activeSessions?: number;
+}

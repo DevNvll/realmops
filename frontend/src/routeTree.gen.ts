@@ -10,12 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ServersRouteImport } from './routes/servers'
 import { Route as PacksRouteImport } from './routes/packs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ServersIndexRouteImport } from './routes/servers/index'
 import { Route as PacksIndexRouteImport } from './routes/packs/index'
+import { Route as SettingsSshKeysRouteImport } from './routes/settings/ssh-keys'
 import { Route as ServersNewRouteImport } from './routes/servers/new'
 import { Route as ServersServerIdRouteImport } from './routes/servers/$serverId'
 import { Route as PacksNewRouteImport } from './routes/packs/new'
@@ -24,6 +27,11 @@ import { Route as PacksPackIdEditRouteImport } from './routes/packs/$packId.edit
 const SetupRoute = SetupRouteImport.update({
   id: '/setup',
   path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ServersRoute = ServersRouteImport.update({
@@ -46,6 +54,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const ServersIndexRoute = ServersIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -55,6 +68,11 @@ const PacksIndexRoute = PacksIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => PacksRoute,
+} as any)
+const SettingsSshKeysRoute = SettingsSshKeysRouteImport.update({
+  id: '/ssh-keys',
+  path: '/ssh-keys',
+  getParentRoute: () => SettingsRoute,
 } as any)
 const ServersNewRoute = ServersNewRouteImport.update({
   id: '/new',
@@ -82,12 +100,15 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/packs': typeof PacksRouteWithChildren
   '/servers': typeof ServersRouteWithChildren
+  '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
   '/packs/new': typeof PacksNewRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/servers/new': typeof ServersNewRoute
+  '/settings/ssh-keys': typeof SettingsSshKeysRoute
   '/packs/': typeof PacksIndexRoute
   '/servers/': typeof ServersIndexRoute
+  '/settings/': typeof SettingsIndexRoute
   '/packs/$packId/edit': typeof PacksPackIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -97,8 +118,10 @@ export interface FileRoutesByTo {
   '/packs/new': typeof PacksNewRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/servers/new': typeof ServersNewRoute
+  '/settings/ssh-keys': typeof SettingsSshKeysRoute
   '/packs': typeof PacksIndexRoute
   '/servers': typeof ServersIndexRoute
+  '/settings': typeof SettingsIndexRoute
   '/packs/$packId/edit': typeof PacksPackIdEditRoute
 }
 export interface FileRoutesById {
@@ -107,12 +130,15 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/packs': typeof PacksRouteWithChildren
   '/servers': typeof ServersRouteWithChildren
+  '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
   '/packs/new': typeof PacksNewRoute
   '/servers/$serverId': typeof ServersServerIdRoute
   '/servers/new': typeof ServersNewRoute
+  '/settings/ssh-keys': typeof SettingsSshKeysRoute
   '/packs/': typeof PacksIndexRoute
   '/servers/': typeof ServersIndexRoute
+  '/settings/': typeof SettingsIndexRoute
   '/packs/$packId/edit': typeof PacksPackIdEditRoute
 }
 export interface FileRouteTypes {
@@ -122,12 +148,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/packs'
     | '/servers'
+    | '/settings'
     | '/setup'
     | '/packs/new'
     | '/servers/$serverId'
     | '/servers/new'
+    | '/settings/ssh-keys'
     | '/packs/'
     | '/servers/'
+    | '/settings/'
     | '/packs/$packId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -137,8 +166,10 @@ export interface FileRouteTypes {
     | '/packs/new'
     | '/servers/$serverId'
     | '/servers/new'
+    | '/settings/ssh-keys'
     | '/packs'
     | '/servers'
+    | '/settings'
     | '/packs/$packId/edit'
   id:
     | '__root__'
@@ -146,12 +177,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/packs'
     | '/servers'
+    | '/settings'
     | '/setup'
     | '/packs/new'
     | '/servers/$serverId'
     | '/servers/new'
+    | '/settings/ssh-keys'
     | '/packs/'
     | '/servers/'
+    | '/settings/'
     | '/packs/$packId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -160,6 +194,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PacksRoute: typeof PacksRouteWithChildren
   ServersRoute: typeof ServersRouteWithChildren
+  SettingsRoute: typeof SettingsRouteWithChildren
   SetupRoute: typeof SetupRoute
 }
 
@@ -170,6 +205,13 @@ declare module '@tanstack/react-router' {
       path: '/setup'
       fullPath: '/setup'
       preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/servers': {
@@ -200,6 +242,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/servers/': {
       id: '/servers/'
       path: '/'
@@ -213,6 +262,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/packs/'
       preLoaderRoute: typeof PacksIndexRouteImport
       parentRoute: typeof PacksRoute
+    }
+    '/settings/ssh-keys': {
+      id: '/settings/ssh-keys'
+      path: '/ssh-keys'
+      fullPath: '/settings/ssh-keys'
+      preLoaderRoute: typeof SettingsSshKeysRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/servers/new': {
       id: '/servers/new'
@@ -274,11 +330,26 @@ const ServersRouteChildren: ServersRouteChildren = {
 const ServersRouteWithChildren =
   ServersRoute._addFileChildren(ServersRouteChildren)
 
+interface SettingsRouteChildren {
+  SettingsSshKeysRoute: typeof SettingsSshKeysRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsSshKeysRoute: SettingsSshKeysRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   PacksRoute: PacksRouteWithChildren,
   ServersRoute: ServersRouteWithChildren,
+  SettingsRoute: SettingsRouteWithChildren,
   SetupRoute: SetupRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { Server } from '@/lib/api'
 import { formatBytes, getStateColor } from '@/lib/utils'
+import { useHostIP } from '@/hooks/use-host-ip'
 import { Badge } from '@/components/ui/badge'
 import {
   Play,
@@ -12,7 +14,9 @@ import {
   Loader2,
   Cpu,
   MemoryStick,
-  MoreVertical
+  MoreVertical,
+  Copy,
+  Check
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -27,6 +31,15 @@ interface ServerCardProps {
 
 export function ServerCard({ server }: ServerCardProps) {
   const queryClient = useQueryClient()
+  const hostIP = useHostIP()
+  const [copied, setCopied] = useState(false)
+
+  const copyServerAddress = (port: number) => {
+    const address = `${hostIP}:${port}`
+    navigator.clipboard.writeText(address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const startMutation = useMutation({
     mutationFn: () => api.servers.start(server.id),
@@ -82,9 +95,21 @@ export function ServerCard({ server }: ServerCardProps) {
                 {server.packId}
               </Badge>
               {primaryPort && (
-                <span className="text-muted-foreground">
-                  :{primaryPort.hostPort}
-                </span>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    copyServerAddress(primaryPort.hostPort)
+                  }}
+                  className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                  title="Click to copy server address"
+                >
+                  <span>:{primaryPort.hostPort}</span>
+                  {copied ? (
+                    <Check className="h-3 w-3 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-3 w-3 opacity-50" />
+                  )}
+                </button>
               )}
             </div>
           </div>

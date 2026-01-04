@@ -22,13 +22,19 @@ import {
   Cpu,
   MemoryStick,
   Network,
-  Box
+  Box,
+  Copy,
+  Check,
+  Key
 } from 'lucide-react'
+import { useState } from 'react'
 import { ConsoleTab } from '../../components/server/ConsoleTab'
 import { LogsTab } from '../../components/server/LogsTab'
 import { FilesTab } from '../../components/server/FilesTab'
+import { SFTPTab } from '../../components/server/SFTPTab'
 import { LoadingSpinner } from '../../components/loading-spinner'
 import { ErrorAlert } from '../../components/error-alert'
+import { useHostIP } from '../../hooks/use-host-ip'
 
 export const Route = createFileRoute('/servers/$serverId')({
   component: ServerDetailPage,
@@ -41,6 +47,15 @@ function ServerDetailPage() {
   const { serverId } = Route.useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const hostIP = useHostIP()
+  const [copied, setCopied] = useState(false)
+
+  const copyServerAddress = (port: number) => {
+    const address = `${hostIP}:${port}`
+    navigator.clipboard.writeText(address)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const {
     data: server,
@@ -128,10 +143,19 @@ function ServerDetailPage() {
                     <span>{server.packId}</span>
                   </div>
                   {server.ports.length > 0 && (
-                    <div className="flex items-center gap-1.5 bg-muted px-1.5 py-0.5 border border-border text-xs text-foreground">
+                    <button
+                      onClick={() => copyServerAddress(server.ports[0].hostPort)}
+                      className="flex items-center gap-1.5 bg-muted px-1.5 py-0.5 border border-border text-xs text-foreground hover:bg-muted/80 hover:border-primary/50 transition-colors cursor-pointer"
+                      title="Click to copy server address"
+                    >
                       <Network className="h-3 w-3" />
-                      <span>:{server.ports[0].hostPort}</span>
-                    </div>
+                      <span>{hostIP}:{server.ports[0].hostPort}</span>
+                      {copied ? (
+                        <Check className="h-3 w-3 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-3 w-3 opacity-50" />
+                      )}
+                    </button>
                   )}
                 </div>
               </div>
@@ -258,6 +282,13 @@ function ServerDetailPage() {
                   <FolderOpen className="h-4 w-4 mr-2" />
                   File Manager
                 </TabsTrigger>
+                <TabsTrigger
+                  value="sftp"
+                  className="!border-0 !border-b-4 !border-b-transparent data-[state=active]:!border-0 data-[state=active]:!border-b-4 data-[state=active]:!border-b-primary data-[state=active]:!bg-transparent data-[state=active]:!shadow-none data-[state=active]:!text-foreground rounded-none h-full px-6 font-bold uppercase !text-muted-foreground hover:!text-foreground hover:bg-muted/50 transition-none"
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  SFTP
+                </TabsTrigger>
               </TabsList>
             </div>
           </div>
@@ -295,6 +326,14 @@ function ServerDetailPage() {
               <div className="max-w-7xl mx-auto w-full h-full">
                 <FilesTab serverId={serverId} />
               </div>
+            </TabsContent>
+
+            {/* SFTP Tab */}
+            <TabsContent
+              value="sftp"
+              className="h-full mt-0 data-[state=active]:flex flex-col p-8 overflow-auto"
+            >
+              <SFTPTab serverId={serverId} />
             </TabsContent>
           </div>
         </Tabs>

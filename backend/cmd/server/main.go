@@ -16,6 +16,8 @@ import (
 	"realmops/internal/ports"
 	"realmops/internal/rcon"
 	"realmops/internal/server"
+	"realmops/internal/sftp"
+	"realmops/internal/sshkeys"
 )
 
 func main() {
@@ -66,6 +68,10 @@ func main() {
 
 	rconManager := rcon.NewManager()
 
+	// SSH key and SFTP managers
+	sshKeyManager := sshkeys.NewManager(database)
+	sftpConfigManager := sshkeys.NewSFTPConfigManager(database)
+
 	apiServer := api.NewServer(
 		cfg,
 		database,
@@ -74,12 +80,40 @@ func main() {
 		jobRunner,
 		dockerRuntime,
 		rconManager,
+		sshKeyManager,
+		sftpConfigManager,
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	go jobRunner.Start(ctx)
+
+	// Start SFTP server if enabled
+	var sftpServer *sftp.Server
+	if cfg.SFTPEnabled {
+		var err error
+		sftpServer, err = sftp.NewServer(
+			cfg,
+			database,
+			packLoader,
+			sshKeyManager,
+			sftpConfigManager,
+		)
+		if err != nil {
+			slog.Error("failed to initialize SFTP server", "error", err)
+		} else {
+			// Set the SFTP server reference for the API status endpoint
+			api.SetSFTPServer(sftpServer)
+
+			go func() {
+				slog.Info("starting SFTP server", "port", cfg.SFTPPort)
+				if err := sftpServer.Start(ctx); err != nil {
+					slog.Error("SFTP server error", "error", err)
+				}
+			}()
+		}
+	}
 
 	go func() {
 		slog.Info("starting API server", "addr", cfg.ListenAddr)
@@ -95,5 +129,8 @@ func main() {
 
 	slog.Info("shutting down...")
 	cancel()
+	if sftpServer != nil {
+		sftpServer.Shutdown()
+	}
 	apiServer.Shutdown(context.Background())
 }

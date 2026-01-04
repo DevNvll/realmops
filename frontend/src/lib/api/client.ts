@@ -1,4 +1,16 @@
-import type { Server, Job, FileEntry, CreateServerRequest, Manifest, CreatePackRequest } from './types';
+import type {
+  Server,
+  Job,
+  FileEntry,
+  CreateServerRequest,
+  Manifest,
+  CreatePackRequest,
+  SSHKey,
+  CreateSSHKeyRequest,
+  SFTPConfig,
+  UpdateSFTPConfigRequest,
+  SFTPStatus
+} from './types';
 
 const API_BASE = '/api';
 
@@ -122,6 +134,32 @@ export const api = {
   },
   jobs: {
     get: (id: string) => request<Job>(`/jobs/${id}`),
+  },
+  system: {
+    info: () => request<{ hostIP: string }>('/system/info'),
+    sftpStatus: () => request<SFTPStatus>('/system/sftp-status'),
+  },
+  sshKeys: {
+    list: () => request<SSHKey[]>('/ssh-keys'),
+    create: (data: CreateSSHKeyRequest) =>
+      request<SSHKey>('/ssh-keys', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      request<void>(`/ssh-keys/${id}`, { method: 'DELETE' }),
+  },
+  sftp: {
+    get: (serverId: string) => request<SFTPConfig>(`/servers/${serverId}/sftp`),
+    update: (serverId: string, data: UpdateSFTPConfigRequest) =>
+      request<SFTPConfig>(`/servers/${serverId}/sftp`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    generatePassword: (serverId: string) =>
+      request<{ password: string }>(`/servers/${serverId}/sftp/password`, {
+        method: 'POST',
+      }),
   },
 };
 

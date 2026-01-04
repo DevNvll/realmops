@@ -130,6 +130,32 @@ func (db *DB) Migrate() error {
 		`CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_mod_profiles_server_id ON mod_profiles(server_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_backups_server_id ON backups(server_id)`,
+
+		// SFTP support tables
+		`CREATE TABLE IF NOT EXISTS ssh_keys (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			public_key TEXT NOT NULL,
+			fingerprint TEXT NOT NULL UNIQUE,
+			key_type TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			last_used_at DATETIME
+		)`,
+
+		`CREATE TABLE IF NOT EXISTS server_sftp_config (
+			server_id TEXT PRIMARY KEY,
+			enabled INTEGER NOT NULL DEFAULT 1,
+			ssh_key_id TEXT,
+			password_hash TEXT,
+			sftp_username TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+			FOREIGN KEY (ssh_key_id) REFERENCES ssh_keys(id) ON DELETE SET NULL
+		)`,
+
+		`CREATE INDEX IF NOT EXISTS idx_ssh_keys_fingerprint ON ssh_keys(fingerprint)`,
+		`CREATE INDEX IF NOT EXISTS idx_server_sftp_config_ssh_key ON server_sftp_config(ssh_key_id)`,
 	}
 
 	for _, migration := range migrations {

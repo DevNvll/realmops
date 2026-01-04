@@ -1,16 +1,22 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"realmops/internal/models"
 	"realmops/internal/server"
+	"realmops/internal/sshkeys"
 )
 
 func writeJSON(w http.ResponseWriter, status int, data any) {
@@ -627,4 +633,306 @@ func (s *Server) handleDeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
+	hostIP := getOutboundIP()
+	writeJSON(w, http.StatusOK, map[string]string{
+		"hostIP": hostIP,
+	})
+}
+
+// getOutboundIP gets the preferred outbound IP of this machine
+func getOutboundIP() string {
+	// Try to get the IP by dialing a public address (doesn't actually connect)
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		// Fallback: try to find a non-loopback interface
+		return getFirstNonLoopbackIP()
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String()
+}
+
+func getFirstNonLoopbackIP() string {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return "localhost"
+	}
+
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+
+			// Prefer IPv4
+			if ip4 := ip.To4(); ip4 != nil {
+				return ip4.String()
+			}
+		}
+	}
+
+	return "localhost"
+}
+
+// SSH Key handlers
+
+func (s *Server) handleListSSHKeys(w http.ResponseWriter, r *http.Request) {
+	keys, err := s.sshKeyManager.List()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Return empty array instead of null
+	if keys == nil {
+		keys = []*sshkeys.SSHKey{}
+	}
+
+	writeJSON(w, http.StatusOK, keys)
+}
+
+func (s *Server) handleCreateSSHKey(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name      string `json:"name"`
+		PublicKey string `json:"publicKey"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	if req.PublicKey == "" {
+		writeError(w, http.StatusBadRequest, "publicKey is required")
+		return
+	}
+
+	// Generate ID
+	id := fmt.Sprintf("key_%d", time.Now().UnixNano())
+
+	key, err := s.sshKeyManager.Create(id, req.Name, req.PublicKey)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, key)
+}
+
+func (s *Server) handleDeleteSSHKey(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := s.sshKeyManager.Delete(id); err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Server SFTP config handlers
+
+type SFTPConfigResponse struct {
+	Enabled        bool                        `json:"enabled"`
+	SSHKeyID       *string                     `json:"sshKeyId,omitempty"`
+	SSHKeyName     *string                     `json:"sshKeyName,omitempty"`
+	Username       string                      `json:"username"`
+	HasPassword    bool                        `json:"hasPassword"`
+	ConnectionInfo SFTPConnectionInfoResponse  `json:"connectionInfo"`
+}
+
+type SFTPConnectionInfoResponse struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+}
+
+func (s *Server) handleGetServerSFTP(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	// Verify server exists
+	_, err := s.serverManager.GetServer(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "server not found")
+		return
+	}
+
+	// Get or create SFTP config
+	config, err := s.sftpConfigManager.GetOrCreate(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Parse port from config
+	port := 2022
+	if s.cfg.SFTPPort != "" {
+		portStr := strings.TrimPrefix(s.cfg.SFTPPort, ":")
+		fmt.Sscanf(portStr, "%d", &port)
+	}
+
+	response := SFTPConfigResponse{
+		Enabled:     config.Enabled,
+		SSHKeyID:    config.SSHKeyID,
+		SSHKeyName:  config.SSHKeyName,
+		Username:    config.SFTPUsername,
+		HasPassword: config.HasPassword,
+		ConnectionInfo: SFTPConnectionInfoResponse{
+			Host:     getOutboundIP(),
+			Port:     port,
+			Username: config.SFTPUsername,
+		},
+	}
+
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleUpdateServerSFTP(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	// Verify server exists
+	_, err := s.serverManager.GetServer(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "server not found")
+		return
+	}
+
+	var req struct {
+		Enabled  *bool   `json:"enabled"`
+		SSHKeyID *string `json:"sshKeyId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Get existing config or create one
+	config, err := s.sftpConfigManager.GetOrCreate(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Apply updates
+	enabled := config.Enabled
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
+
+	sshKeyID := config.SSHKeyID
+	if req.SSHKeyID != nil {
+		if *req.SSHKeyID == "" {
+			sshKeyID = nil
+		} else {
+			// Verify the key exists
+			_, err := s.sshKeyManager.Get(*req.SSHKeyID)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "SSH key not found")
+				return
+			}
+			sshKeyID = req.SSHKeyID
+		}
+	}
+
+	if err := s.sftpConfigManager.Update(id, enabled, sshKeyID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Return updated config
+	s.handleGetServerSFTP(w, r)
+}
+
+func (s *Server) handleSetServerSFTPPassword(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	// Verify server exists
+	_, err := s.serverManager.GetServer(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "server not found")
+		return
+	}
+
+	// Get or create SFTP config
+	_, err = s.sftpConfigManager.GetOrCreate(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Generate a secure random password
+	passwordBytes := make([]byte, 24)
+	if _, err := rand.Read(passwordBytes); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to generate password")
+		return
+	}
+	password := base64.URLEncoding.EncodeToString(passwordBytes)[:24]
+
+	// Set the password
+	if err := s.sftpConfigManager.SetPassword(id, password); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"password": password,
+	})
+}
+
+// SFTP Server status handler
+// Note: sftpServer reference will be set by main.go
+
+var sftpServerInstance SFTPServerInterface
+
+type SFTPServerInterface interface {
+	GetHostFingerprint() string
+	GetActiveSessions() int
+}
+
+func SetSFTPServer(server SFTPServerInterface) {
+	sftpServerInstance = server
+}
+
+func (s *Server) handleGetSFTPStatus(w http.ResponseWriter, r *http.Request) {
+	// Parse port from config
+	port := 2022
+	if s.cfg.SFTPPort != "" {
+		portStr := strings.TrimPrefix(s.cfg.SFTPPort, ":")
+		fmt.Sscanf(portStr, "%d", &port)
+	}
+
+	response := map[string]any{
+		"running": s.cfg.SFTPEnabled && sftpServerInstance != nil,
+		"enabled": s.cfg.SFTPEnabled,
+		"port":    port,
+	}
+
+	if sftpServerInstance != nil {
+		response["hostFingerprint"] = sftpServerInstance.GetHostFingerprint()
+		response["activeSessions"] = sftpServerInstance.GetActiveSessions()
+	}
+
+	writeJSON(w, http.StatusOK, response)
 }

@@ -16,19 +16,22 @@ import (
 	"realmops/internal/packs"
 	"realmops/internal/rcon"
 	"realmops/internal/server"
+	"realmops/internal/sshkeys"
 	"realmops/internal/ws"
 )
 
 type Server struct {
-	cfg            *config.Config
-	db             *db.DB
-	serverManager  *server.Manager
-	packLoader     *packs.Loader
-	jobRunner      *jobs.Runner
-	logStreamer    *ws.LogStreamer
-	consoleHandler *ws.ConsoleHandler
-	authMiddleware *auth.Middleware
-	httpServer     *http.Server
+	cfg               *config.Config
+	db                *db.DB
+	serverManager     *server.Manager
+	packLoader        *packs.Loader
+	jobRunner         *jobs.Runner
+	logStreamer       *ws.LogStreamer
+	consoleHandler    *ws.ConsoleHandler
+	authMiddleware    *auth.Middleware
+	httpServer        *http.Server
+	sshKeyManager     *sshkeys.Manager
+	sftpConfigManager *sshkeys.SFTPConfigManager
 }
 
 func NewServer(
@@ -39,16 +42,20 @@ func NewServer(
 	jobRunner *jobs.Runner,
 	dockerProvider *docker.Provider,
 	rconManager *rcon.Manager,
+	sshKeyManager *sshkeys.Manager,
+	sftpConfigManager *sshkeys.SFTPConfigManager,
 ) *Server {
 	return &Server{
-		cfg:            cfg,
-		db:             database,
-		serverManager:  serverManager,
-		packLoader:     packLoader,
-		jobRunner:      jobRunner,
-		logStreamer:    ws.NewLogStreamer(dockerProvider),
-		consoleHandler: ws.NewConsoleHandler(packLoader, rconManager),
-		authMiddleware: auth.NewMiddleware(cfg.AuthServiceURL),
+		cfg:               cfg,
+		db:                database,
+		serverManager:     serverManager,
+		packLoader:        packLoader,
+		jobRunner:         jobRunner,
+		logStreamer:       ws.NewLogStreamer(dockerProvider),
+		consoleHandler:    ws.NewConsoleHandler(packLoader, rconManager),
+		authMiddleware:    auth.NewMiddleware(cfg.AuthServiceURL),
+		sshKeyManager:     sshKeyManager,
+		sftpConfigManager: sftpConfigManager,
 	}
 }
 
@@ -77,6 +84,9 @@ func (s *Server) Start() error {
 		// Protected routes require authentication
 		r.Group(func(r chi.Router) {
 			r.Use(s.authMiddleware.RequireAuth)
+
+			// System info endpoint
+			r.Get("/system/info", s.handleSystemInfo)
 
 			r.Route("/servers", func(r chi.Router) {
 				r.Get("/", s.handleListServers)
@@ -113,6 +123,21 @@ func (s *Server) Start() error {
 			r.Route("/jobs", func(r chi.Router) {
 				r.Get("/{id}", s.handleGetJob)
 			})
+
+			// SSH Keys management
+			r.Route("/ssh-keys", func(r chi.Router) {
+				r.Get("/", s.handleListSSHKeys)
+				r.Post("/", s.handleCreateSSHKey)
+				r.Delete("/{id}", s.handleDeleteSSHKey)
+			})
+
+			// Server SFTP configuration
+			r.Get("/servers/{id}/sftp", s.handleGetServerSFTP)
+			r.Put("/servers/{id}/sftp", s.handleUpdateServerSFTP)
+			r.Post("/servers/{id}/sftp/password", s.handleSetServerSFTPPassword)
+
+			// System SFTP status
+			r.Get("/system/sftp-status", s.handleGetSFTPStatus)
 		})
 	})
 

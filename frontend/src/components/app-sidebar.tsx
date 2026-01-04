@@ -7,6 +7,7 @@ import {
   Server,
   LogOut,
   User,
+  Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSession, signOut } from "@/lib/auth-client"
@@ -47,6 +48,11 @@ const navMain = [
     title: "Game Packs",
     url: "/packs",
     icon: Package,
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
   },
 ]
 

@@ -8,15 +8,18 @@ import (
 )
 
 type Config struct {
-	ListenAddr     string
-	DataDir        string
-	DatabasePath   string
-	PacksDir       string
-	DockerHost     string
-	PortRangeStart int
-	PortRangeEnd   int
-	SessionSecret  string
-	AuthServiceURL string
+	ListenAddr      string
+	DataDir         string
+	DatabasePath    string
+	PacksDir        string
+	DockerHost      string
+	PortRangeStart  int
+	PortRangeEnd    int
+	SessionSecret   string
+	AuthServiceURL  string
+	SFTPEnabled     bool
+	SFTPPort        string
+	SFTPHostKeyPath string
 }
 
 func Load() (*Config, error) {
@@ -32,9 +35,12 @@ func Load() (*Config, error) {
 		PortRangeEnd:   getEnvInt("GSM_PORT_RANGE_END", 40000),
 		SessionSecret:  getEnv("GSM_SESSION_SECRET", "change-me-in-production"),
 		AuthServiceURL: getEnv("GSM_AUTH_SERVICE_URL", "http://localhost:3001"),
+		SFTPEnabled:    getEnvBool("GSM_SFTP_ENABLED", true),
+		SFTPPort:       getEnv("GSM_SFTP_PORT", ":2022"),
 	}
 
 	cfg.DatabasePath = filepath.Join(cfg.DataDir, "db", "gsm.db")
+	cfg.SFTPHostKeyPath = getEnv("GSM_SFTP_HOST_KEY_PATH", filepath.Join(cfg.DataDir, "sftp_host_key"))
 
 	return cfg, nil
 }
@@ -76,6 +82,15 @@ func getEnvInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if i, err := strconv.Atoi(value); err == nil {
 			return i
+		}
+	}
+	return defaultValue
+}
+
+func getEnvBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if b, err := strconv.ParseBool(value); err == nil {
+			return b
 		}
 	}
 	return defaultValue

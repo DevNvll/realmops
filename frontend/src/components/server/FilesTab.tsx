@@ -1,17 +1,40 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../lib/api'
 import type { FileEntry } from '../../lib/api'
 import { formatBytes } from '../../lib/utils'
 import { Button } from '../ui/button'
+import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog'
 import Editor from '@monaco-editor/react'
 import {
   Loader2,
   FolderOpen,
   FileText,
   Folder,
-  Save
+  Save,
+  Upload,
+  Download,
+  FolderPlus,
+  Trash2
 } from 'lucide-react'
 
 interface FilesTabProps {
@@ -58,13 +81,21 @@ function getLanguageFromFilename(filename: string): string {
 }
 
 export function FilesTab({ serverId }: FilesTabProps) {
+  const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [currentPath, setCurrentPath] = useState('')
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [fileContent, setFileContent] = useState('')
   const [saving, setSaving] = useState(false)
   const [loadingFile, setLoadingFile] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [deleteEntry, setDeleteEntry] = useState<FileEntry | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
-  const { data: files, isLoading } = useQuery({
+  const { data: files, isLoading, refetch } = useQuery({
     queryKey: ['server-files', serverId, currentPath],
     queryFn: () => api.servers.files.list(serverId, currentPath)
   })
@@ -103,15 +134,130 @@ export function FilesTab({ serverId }: FilesTabProps) {
     }
   }
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const content = await file.text()
+        const filePath = currentPath ? `${currentPath}/${file.name}` : file.name
+        await api.servers.files.put(serverId, filePath, content)
+      }
+      refetch()
+    } finally {
+      setUploading(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleDownload = () => {
+    if (!selectedFile) return
+
+    // Create a blob and download
+    const blob = new Blob([fileContent], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = selectedFile.split('/').pop() || 'file'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return
+
+    setCreatingFolder(true)
+    try {
+      // Create an empty .gitkeep file to create the folder
+      const folderPath = currentPath
+        ? `${currentPath}/${newFolderName}/.gitkeep`
+        : `${newFolderName}/.gitkeep`
+      await api.servers.files.put(serverId, folderPath, '')
+      setShowNewFolderDialog(false)
+      setNewFolderName('')
+      refetch()
+    } finally {
+      setCreatingFolder(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteEntry) return
+
+    setDeleting(true)
+    try {
+      const path = currentPath
+        ? `${currentPath}/${deleteEntry.name}`
+        : deleteEntry.name
+      await api.servers.files.delete(serverId, path)
+
+      // If we deleted the currently selected file, clear selection
+      if (selectedFile?.endsWith(deleteEntry.name)) {
+        setSelectedFile(null)
+        setFileContent('')
+      }
+
+      setDeleteEntry(null)
+      refetch()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
       <div className="lg:col-span-1 flex flex-col h-full border-2 border-border bg-card">
-        <div className="py-3 px-4 border-b-2 border-border bg-muted/30">
-          <div className="flex items-center gap-2 text-sm font-bold overflow-hidden font-mono">
+        <div className="py-2 px-3 border-b-2 border-border bg-muted/30 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-bold overflow-hidden font-mono min-w-0">
             <FolderOpen className="h-4 w-4 shrink-0" />
             <span className="truncate" title={`/${currentPath}`}>
               /{currentPath}
             </span>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleUploadClick}
+              disabled={uploading}
+              title="Upload files"
+            >
+              {uploading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Upload className="h-3.5 w-3.5" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setShowNewFolderDialog(true)}
+              title="New folder"
+            >
+              <FolderPlus className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
         <div className="p-0 flex-1 overflow-hidden">
@@ -134,7 +280,7 @@ export function FilesTab({ serverId }: FilesTabProps) {
                 files?.map((entry) => (
                   <div
                     key={entry.name}
-                    className={`flex items-center gap-2 px-2 py-1.5 rounded-none cursor-pointer text-sm transition-colors font-mono ${
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-none cursor-pointer text-sm transition-colors font-mono group ${
                       selectedFile?.endsWith(entry.name)
                         ? 'bg-primary text-primary-foreground'
                         : 'hover:bg-muted'
@@ -152,6 +298,22 @@ export function FilesTab({ serverId }: FilesTabProps) {
                         {formatBytes(entry.size)}
                       </span>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity ${
+                        selectedFile?.endsWith(entry.name)
+                          ? 'text-primary-foreground hover:text-primary-foreground hover:bg-primary/80'
+                          : 'text-muted-foreground hover:text-red-500'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDeleteEntry(entry)
+                      }}
+                      title={`Delete ${entry.isDir ? 'folder' : 'file'}`}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 ))
               )}
@@ -164,25 +326,36 @@ export function FilesTab({ serverId }: FilesTabProps) {
         {selectedFile ? (
           <>
             <div className="py-2 px-4 border-b-2 border-border bg-muted/30 min-h-[53px] flex flex-row items-center justify-between space-y-0">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                <span className="font-bold text-sm font-mono">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className="font-bold text-sm font-mono truncate">
                   {selectedFile}
                 </span>
               </div>
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={saving}
-                className="h-8 shadow-none"
-              >
-                {saving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                ) : (
-                  <Save className="h-3.5 w-3.5 mr-1.5" />
-                )}
-                SAVE
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownload}
+                  className="h-8 shadow-none"
+                >
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                  Download
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="h-8 shadow-none"
+                >
+                  {saving ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  Save
+                </Button>
+              </div>
             </div>
             <div className="flex-1 min-h-0">
               {loadingFile ? (
@@ -220,9 +393,83 @@ export function FilesTab({ serverId }: FilesTabProps) {
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <FileText className="h-12 w-12 mb-4 opacity-20" />
             <p className="font-mono uppercase">Select a file to view or edit</p>
+            <p className="text-sm mt-2 opacity-70">
+              or use the upload button to add files
+            </p>
           </div>
         )}
       </div>
+
+      {/* New Folder Dialog */}
+      <Dialog open={showNewFolderDialog} onOpenChange={setShowNewFolderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+            <DialogDescription>
+              Enter a name for the new folder.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="Folder name"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleCreateFolder()
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowNewFolderDialog(false)
+                setNewFolderName('')
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateFolder}
+              disabled={creatingFolder || !newFolderName.trim()}
+            >
+              {creatingFolder && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteEntry} onOpenChange={(open) => !open && setDeleteEntry(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {deleteEntry?.isDir ? 'folder' : 'file'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteEntry?.name}"?
+              {deleteEntry?.isDir && ' This will delete all files and folders inside it.'}
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
