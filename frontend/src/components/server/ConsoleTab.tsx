@@ -3,8 +3,6 @@ import { createConsoleWebSocket } from '../../lib/api'
 import type { ServerState, ConsoleMessage, ConsoleResponse } from '../../lib/api'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
-import { Badge } from '../ui/badge'
-import { ScrollArea } from '../ui/scroll-area'
 import { RefreshCw, Send } from 'lucide-react'
 
 interface ConsoleEntry {
@@ -134,7 +132,9 @@ export function ConsoleTab({ serverId, serverState, rconEnabled, isInstalled }: 
 
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
   }, [output])
 
   const sendCommand = useCallback(() => {
@@ -229,66 +229,108 @@ export function ConsoleTab({ serverId, serverState, rconEnabled, isInstalled }: 
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Badge variant={getStatusBadgeVariant()}>{connectionStatus}</Badge>
-        {connectionStatus === 'disconnected' && (
-          <Button size="sm" variant="outline" onClick={connect}>
-            Connect
-          </Button>
-        )}
-        {connectionStatus === 'connected' && (
-          <Button size="sm" variant="outline" onClick={disconnect}>
-            Disconnect
-          </Button>
-        )}
-        {connectionStatus === 'error' && (
-          <Button size="sm" variant="outline" onClick={connect}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setOutput([])}
-          className="ml-auto"
-        >
-          Clear
-        </Button>
-      </div>
-
-      <ScrollArea ref={scrollRef} className="h-80 w-full rounded border bg-black p-4">
-        <pre className="text-xs font-mono whitespace-pre-wrap">
-          {output.length === 0 ? (
-            <span className="text-muted-foreground">
-              {connectionStatus === 'disconnected'
-                ? 'Click "Connect" to start the console session.'
-                : 'Waiting for connection...'}
+    <div className="relative flex flex-col h-full min-h-0">
+      {/* Floating action buttons - only show when connected or has output */}
+      {(connectionStatus !== 'disconnected' || output.length > 0) && (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-zinc-900/80 backdrop-blur-sm px-2 py-1 rounded text-xs">
+            <span className="relative flex h-2 w-2">
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                connectionStatus === 'connected' ? 'bg-emerald-400' :
+                connectionStatus === 'connecting' ? 'bg-amber-400' :
+                connectionStatus === 'error' ? 'bg-red-400' : 'bg-zinc-400'
+              }`}></span>
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                connectionStatus === 'connected' ? 'bg-emerald-500' :
+                connectionStatus === 'connecting' ? 'bg-amber-500' :
+                connectionStatus === 'error' ? 'bg-red-500' : 'bg-zinc-500'
+              }`}></span>
             </span>
-          ) : (
-            output.map((entry, i) => (
-              <div key={i} className={getEntryClassName(entry.type)}>
+            <span className="text-zinc-400 capitalize">{connectionStatus}</span>
+          </div>
+          {connectionStatus === 'connected' && (
+            <Button size="sm" variant="secondary" onClick={disconnect} className="h-7 text-xs bg-zinc-900/80 backdrop-blur-sm hover:bg-zinc-800">
+              Disconnect
+            </Button>
+          )}
+          {connectionStatus === 'error' && (
+            <Button size="sm" variant="secondary" onClick={connect} className="h-7 text-xs bg-zinc-900/80 backdrop-blur-sm hover:bg-zinc-800">
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              Retry
+            </Button>
+          )}
+          {output.length > 0 && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setOutput([])}
+              className="h-7 text-xs bg-zinc-900/80 backdrop-blur-sm hover:bg-zinc-800"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Console Output - fills remaining space */}
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 w-full bg-[#0a0a0a] p-4 pt-14 font-mono text-xs overflow-y-auto"
+      >
+        {output.length === 0 && connectionStatus === 'disconnected' ? (
+          <div className="flex flex-col items-center justify-center h-full -mt-14">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="h-16 w-16 rounded-full bg-zinc-800/50 flex items-center justify-center">
+                <Send className="h-7 w-7 text-zinc-600" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-zinc-400 text-sm font-sans">RCON Console</p>
+                <p className="text-zinc-600 text-xs font-sans">Connect to send commands to your server</p>
+              </div>
+              <Button onClick={connect} className="mt-2 bg-emerald-600 hover:bg-emerald-700">
+                <Send className="h-4 w-4 mr-2" />
+                Connect to Console
+              </Button>
+            </div>
+          </div>
+        ) : output.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full -mt-14">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="h-12 w-12 rounded-full bg-zinc-800/50 flex items-center justify-center animate-pulse">
+                <RefreshCw className="h-5 w-5 text-amber-500 animate-spin" />
+              </div>
+              <p className="text-zinc-500 text-sm font-sans">Connecting...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {output.map((entry, i) => (
+              <div key={i} className={`py-0.5 ${getEntryClassName(entry.type)}`}>
                 {entry.content}
               </div>
-            ))
-          )}
-        </pre>
-      </ScrollArea>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <div className="flex gap-2">
+      {/* Input - always at bottom */}
+      <div className="flex gap-0 shrink-0 border-t border-zinc-800 bg-[#0a0a0a]">
+        <div className="flex items-center px-4 text-emerald-500 font-mono text-sm font-bold">
+          &gt;
+        </div>
         <Input
           ref={inputRef}
           value={currentInput}
           onChange={(e) => setCurrentInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Enter command..."
+          placeholder={connectionStatus === 'connected' ? 'Enter command...' : 'Connect to enter commands...'}
           disabled={connectionStatus !== 'connected'}
-          className="font-mono"
+          className="font-mono border-0 rounded-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-sm text-zinc-200 placeholder:text-zinc-600"
         />
         <Button
           onClick={sendCommand}
           disabled={connectionStatus !== 'connected' || !currentInput.trim()}
+          className="rounded-none h-12 px-6 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-800 disabled:text-zinc-600"
         >
           <Send className="h-4 w-4" />
         </Button>
