@@ -1,10 +1,15 @@
+import * as React from "react"
 import { Link, useRouterState } from "@tanstack/react-router"
-import { Server, Package, Settings, Rocket } from "lucide-react"
+import {
+  Package,
+  LayoutDashboard,
+  Gamepad2,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
 
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -12,15 +17,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
-import { ThemeToggle } from "@/components/theme-toggle"
 
-const navItems = [
+const navMain = [
   {
-    title: "Servers",
+    title: "Dashboard",
     url: "/",
-    icon: Server,
+    icon: LayoutDashboard,
   },
   {
     title: "Game Packs",
@@ -29,69 +33,70 @@ const navItems = [
   },
 ]
 
+function SidebarHeaderContent() {
+  const { state } = useSidebar()
+  const isCollapsed = state === "collapsed"
+
+  return (
+    <SidebarHeader className="!h-16 !flex-row !items-center border-b border-border/40 !p-0 justify-center group-data-[state=expanded]:justify-start group-data-[state=expanded]:px-4">
+      <Link to="/" className="flex items-center gap-2">
+        {isCollapsed ? (
+          <Gamepad2 className="size-5 text-textMain" />
+        ) : (
+          <span className="text-xl font-bold tracking-tight uppercase text-textMain">Soar</span>
+        )}
+      </Link>
+    </SidebarHeader>
+  )
+}
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const routerState = useRouterState()
   const currentPath = routerState.location.pathname
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link to="/">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Rocket className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">SOAR</span>
-                  <span className="truncate text-xs">Game Server Manager</span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
+      <SidebarHeaderContent />
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] font-bold text-textMuted/60 uppercase tracking-widest">
+            Platform
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={currentPath === item.url}
-                    tooltip={item.title}
-                  >
-                    <Link to={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navMain.map((item) => {
+                const isActive = currentPath === item.url
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.title}
+                      className={cn(
+                        "text-[14px] font-medium transition-all bg-transparent",
+                        isActive
+                          ? "bg-surfaceHighlight text-textMain"
+                          : "text-textMuted hover:bg-surfaceHighlight/50 hover:text-textMain"
+                      )}
+                    >
+                      <Link to={item.url}>
+                        <item.icon
+                          className={cn(
+                            "shrink-0",
+                            isActive ? "text-brand" : "text-textMuted/60"
+                          )}
+                        />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
       </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
-              <Settings />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <div className="flex items-center justify-between w-full px-2 py-1">
-              <span className="text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">Theme</span>
-              <ThemeToggle />
-            </div>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   )
 }
