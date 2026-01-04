@@ -85,12 +85,12 @@ function AuthenticatedLayout() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-4 px-6 border-b border-border/40 bg-background sticky top-0 z-10">
+          <header className="flex h-16 shrink-0 items-center gap-4 px-6 border-b border-border bg-background sticky top-0 z-10">
             <div className="flex items-center gap-4 flex-1">
               <SidebarTrigger className="-ml-1" />
               <Separator
                 orientation="vertical"
-                className="h-5 bg-border/60"
+                className="!h-4 !self-auto bg-border"
               />
               <DynamicBreadcrumbs />
               <HeaderActions />

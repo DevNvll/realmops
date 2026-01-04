@@ -54,7 +54,7 @@ function SettingsLayout() {
                   <Link
                     to={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                      "flex items-center gap-3 px-3 py-2 text-sm transition-colors",
                       isActive
                         ? "bg-primary/10 text-primary font-medium"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"

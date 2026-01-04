@@ -70,7 +70,7 @@ function SidebarHeaderContent() {
           isCollapsed ? "justify-center" : "px-4"
         )}
       >
-        <div className="size-8 bg-foreground rounded-md flex items-center justify-center shrink-0">
+        <div className="size-8 bg-foreground flex items-center justify-center shrink-0">
           <Gamepad2 className="size-4 text-background" />
         </div>
         {!isCollapsed && (
@@ -106,23 +106,29 @@ function SidebarUserFooter() {
     : session.user.email?.charAt(0).toUpperCase() || "U"
 
   return (
-    <SidebarFooter className="border-t border-border p-2">
+    <SidebarFooter className="border-t border-border p-3">
       <SidebarMenu>
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <SidebarMenuButton
-                className={cn(
-                  "h-12 gap-3 transition-all duration-200",
-                  isCollapsed && "justify-center"
-                )}
-              >
-                <Avatar className="h-8 w-8 rounded-md">
-                  <AvatarFallback className="rounded-md bg-muted text-sm font-medium">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-                {!isCollapsed && (
+              {isCollapsed ? (
+                <button className="flex h-10 w-10 items-center justify-center hover:bg-accent/50 transition-colors mx-auto">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-zinc-800 text-zinc-200 text-sm font-medium">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              ) : (
+                <SidebarMenuButton
+                  size="lg"
+                  className="h-12 gap-3"
+                >
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarFallback className="bg-zinc-800 text-zinc-200 text-sm font-medium">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="flex flex-col items-start flex-1 min-w-0">
                     <span className="text-sm font-medium truncate w-full">
                       {session.user.name || "User"}
@@ -131,11 +137,9 @@ function SidebarUserFooter() {
                       {session.user.email}
                     </span>
                   </div>
-                )}
-                {!isCollapsed && (
                   <ChevronDown className="size-4 text-muted-foreground" />
-                )}
-              </SidebarMenuButton>
+                </SidebarMenuButton>
+              )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="top" className="w-56">
               <div className="px-2 py-2">
@@ -177,7 +181,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
               {navMain.map((item) => {
-                const isActive = currentPath === item.url
+                const isActive = currentPath === item.url || (item.url !== '/' && currentPath.startsWith(item.url))
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
