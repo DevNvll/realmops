@@ -166,7 +166,7 @@ function ServerDetailPage() {
 
             <div className="flex items-center gap-3">
               {/* Server Control Actions */}
-              <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg">
+              <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/50 p-1">
                 {isStopped ? (
                   <Button
                     onClick={() => startMutation.mutate()}
