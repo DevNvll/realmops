@@ -194,6 +194,11 @@ export interface CreateServerRequest {
   variables: Record<string, unknown>;
 }
 
+export interface UpdateServerRequest {
+  name?: string;
+  variables?: Record<string, unknown>;
+}
+
 export interface ConsoleMessage {
   type: 'command';
   payload: string;

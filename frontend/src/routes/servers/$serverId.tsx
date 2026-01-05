@@ -1,40 +1,42 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../../lib/api'
-import { formatBytes, getStateColor } from '../../lib/utils'
-import { Button } from '../../components/ui/button'
-import { Badge } from '../../components/ui/badge'
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '../../components/ui/tabs'
-import {
-  Play,
-  Square,
-  RotateCw,
-  Trash2,
-  Loader2,
-  Terminal,
-  FolderOpen,
-  TerminalSquare,
-  Cpu,
-  MemoryStick,
-  Network,
-  Box,
-  Copy,
-  Check,
-  Key
+    Box,
+    Check,
+    Copy,
+    Cpu,
+    FolderOpen,
+    Key,
+    Loader2,
+    MemoryStick,
+    Network,
+    Play,
+    RotateCw,
+    Settings,
+    Square,
+    Terminal,
+    TerminalSquare,
+    Trash2
 } from 'lucide-react'
 import { useState } from 'react'
-import { ConsoleTab } from '../../components/server/ConsoleTab'
-import { LogsTab } from '../../components/server/LogsTab'
-import { FilesTab } from '../../components/server/FilesTab'
-import { SFTPTab } from '../../components/server/SFTPTab'
-import { LoadingSpinner } from '../../components/loading-spinner'
 import { ErrorAlert } from '../../components/error-alert'
+import { LoadingSpinner } from '../../components/loading-spinner'
+import { ConsoleTab } from '../../components/server/ConsoleTab'
+import { EditServerDialog } from '../../components/server/EditServerDialog'
+import { FilesTab } from '../../components/server/FilesTab'
+import { LogsTab } from '../../components/server/LogsTab'
+import { SFTPTab } from '../../components/server/SFTPTab'
+import { Badge } from '../../components/ui/badge'
+import { Button } from '../../components/ui/button'
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger
+} from '../../components/ui/tabs'
 import { useHostIP } from '../../hooks/use-host-ip'
+import { api } from '../../lib/api'
+import { formatBytes, getStateColor } from '../../lib/utils'
 
 export const Route = createFileRoute('/servers/$serverId')({
   component: ServerDetailPage,
@@ -49,6 +51,7 @@ function ServerDetailPage() {
   const queryClient = useQueryClient()
   const hostIP = useHostIP()
   const [copied, setCopied] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   const copyServerAddress = (port: number) => {
     const address = `${hostIP}:${port}`
@@ -212,6 +215,17 @@ function ServerDetailPage() {
                 )}
               </div>
 
+              {/* Settings Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditDialogOpen(true)}
+                className="h-8 w-8 p-0 text-zinc-400 hover:text-foreground hover:bg-muted"
+                title="Edit server settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+
               {/* Destructive Action - Separated */}
               <Button
                 variant="ghost"
@@ -338,6 +352,13 @@ function ServerDetailPage() {
           </div>
         </Tabs>
       </div>
+
+      {/* Edit Server Dialog */}
+      <EditServerDialog
+        server={server}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>
   )
 }

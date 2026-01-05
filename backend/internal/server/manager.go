@@ -61,6 +61,11 @@ type CreateServerRequest struct {
 	Variables map[string]any `json:"variables"`
 }
 
+type UpdateServerRequest struct {
+	Name      *string        `json:"name,omitempty"`
+	Variables map[string]any `json:"variables,omitempty"`
+}
+
 func (m *Manager) CreateServer(ctx context.Context, req CreateServerRequest) (*models.Server, error) {
 	manifest, err := m.packs.LoadFromDir(m.packs.GetPackPath(req.PackID))
 	if err != nil {
@@ -253,6 +258,62 @@ func (m *Manager) RestartServer(ctx context.Context, id string) error {
 		return err
 	}
 	return m.StartServer(ctx, id)
+}
+
+func (m *Manager) UpdateServer(ctx context.Context, id string, req UpdateServerRequest) (*models.Server, error) {
+	server, err := m.GetServer(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prevent updates while server is installing or in a transitional state
+	if server.State == models.ServerStateInstalling {
+		return nil, fmt.Errorf("cannot update server while installing")
+	}
+
+	// Update name if provided
+	if req.Name != nil && *req.Name != "" {
+		server.Name = *req.Name
+	}
+
+	// Update variables if provided
+	if req.Variables != nil {
+		// Load pack manifest to validate variables
+		manifest, err := m.packs.LoadFromDir(m.packs.GetPackPath(server.PackID))
+		if err != nil {
+			return nil, fmt.Errorf("failed to load pack: %w", err)
+		}
+
+		// Merge with existing variables and validate
+		mergedVars := make(map[string]any)
+		for k, v := range server.Vars {
+			mergedVars[k] = v
+		}
+		for k, v := range req.Variables {
+			mergedVars[k] = v
+		}
+
+		if err := m.validateVariables(manifest, mergedVars); err != nil {
+			return nil, fmt.Errorf("invalid variables: %w", err)
+		}
+
+		server.Vars = mergedVars
+	}
+
+	// Serialize variables to JSON
+	varsJSON, _ := json.Marshal(server.Vars)
+	server.VarsJSON = string(varsJSON)
+	server.UpdatedAt = time.Now()
+
+	// Update database
+	_, err = m.db.Exec(`
+		UPDATE servers SET name = ?, vars_json = ?, updated_at = ? WHERE id = ?
+	`, server.Name, server.VarsJSON, server.UpdatedAt, server.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return server, nil
 }
 
 func (m *Manager) DeleteServer(ctx context.Context, id string) error {

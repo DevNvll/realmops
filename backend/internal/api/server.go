@@ -5,9 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 	"realmops/internal/auth"
 	"realmops/internal/config"
 	"realmops/internal/db"
@@ -18,6 +15,10 @@ import (
 	"realmops/internal/server"
 	"realmops/internal/sshkeys"
 	"realmops/internal/ws"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 )
 
 type Server struct {
@@ -92,6 +93,7 @@ func (s *Server) Start() error {
 				r.Get("/", s.handleListServers)
 				r.Post("/", s.handleCreateServer)
 				r.Get("/{id}", s.handleGetServer)
+				r.Patch("/{id}", s.handleUpdateServer)
 				r.Delete("/{id}", s.handleDeleteServer)
 				r.Post("/{id}/start", s.handleStartServer)
 				r.Post("/{id}/stop", s.handleStopServer)

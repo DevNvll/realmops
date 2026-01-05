@@ -13,10 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"realmops/internal/models"
 	"realmops/internal/server"
 	"realmops/internal/sshkeys"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func writeJSON(w http.ResponseWriter, status int, data any) {
@@ -71,6 +72,27 @@ func (s *Server) handleDeleteServer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleUpdateServer(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var req server.UpdateServerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	srv, err := s.serverManager.UpdateServer(r.Context(), id, req)
+	if err != nil {
+		if strings.Contains(err.Error(), "cannot update") {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, srv)
 }
 
 func (s *Server) handleStartServer(w http.ResponseWriter, r *http.Request) {

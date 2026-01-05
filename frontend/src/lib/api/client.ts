@@ -1,17 +1,17 @@
 import type {
-  Server,
-  Job,
-  FileEntry,
-  CreateServerRequest,
-  Manifest,
-  CreatePackRequest,
-  SSHKey,
-  CreateSSHKeyRequest,
-  SFTPConfig,
-  UpdateSFTPConfigRequest,
-  SFTPStatus,
-  SystemConfig,
-  UpdateSystemConfigRequest
+    CreatePackRequest,
+    CreateServerRequest,
+    CreateSSHKeyRequest,
+    FileEntry,
+    Job,
+    Manifest,
+    Server,
+    SFTPConfig,
+    SFTPStatus,
+    SSHKey,
+    SystemConfig,
+    UpdateSFTPConfigRequest,
+    UpdateSystemConfigRequest
 } from './types';
 
 const API_BASE = '/api';
@@ -45,6 +45,11 @@ export const api = {
     create: (data: CreateServerRequest) =>
       request<Server>('/servers', {
         method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: UpdateServerRequest) =>
+      request<Server>(`/servers/${id}`, {
+        method: 'PATCH',
         body: JSON.stringify(data),
       }),
     delete: (id: string) =>
